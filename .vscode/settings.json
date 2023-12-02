@@ -1,3 +1,8 @@
 {
-    "idf.gitPathWin": "c:\\Espressif4.4.6\\tools\\idf-git\\2.39.2\\cmd\\git.exe"
+    "idf.openOcdConfigs": [
+        "board/esp32s3-builtin.cfg"
+    ],
+    "idf.adapterTargetName": "esp32s3",
+    "idf.portWin": "COM12",
+    "idf.flashType": "JTAG"
 }
