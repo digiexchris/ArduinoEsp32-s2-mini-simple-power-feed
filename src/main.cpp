@@ -1,17 +1,27 @@
+//Currently written for the esp32-s2 mini dev kit available on aliexpress, the one based on the esp32-mini board with two rows of pins on each side
+//a 5v level shifter is recommended for the stepper driver inputs, but I have not had any issues without one
+//the stepper driver is a TB6600, but any driver that accepts step/dir inputs should work
+//the stepper is a 60BYGH Nema23, but any stepper should work.
+//prioritize rpm over torque, since the align power feed has a relatively high gear ratio
+//if you reuse most of the clutch mechanism
 #include <Arduino.h>
+#include <Bounce2.h> // Include the Bounce2 library for debounce
 
 #include "FastAccelStepper.h"
+#include <memory>
+#include "stepper.h"
+#include "state.h"
 
-#define dirPinStepper 18
-#define enablePinStepper 21
-#define stepPinStepper 16
-#define speedPin 17 //front knob pot
-#define maxSpeedPin 33 //trimpot to select max speed
-#define leftPin 34
-#define rightPin 35
+#define dirPinStepper 4
+#define enablePinStepper 5
+#define stepPinStepper 6
+#define speedPin 7 //front knob pot
+//#define maxSpeedPin 7 //trimpot to select max speed
+#define leftPin 35
+#define rightPin 38
 #define rapidPin 36
-#define stopLeftPin 37
-#define stopRightPin 38
+#define stopLeftPin 8
+#define stopRightPin 17
 
 //TODO add stop positions to oled display
 
@@ -19,161 +29,113 @@ const int maxDriverFreq = 20000000; // 20kHz max pulse freq in millihz at 25/70 
 const int maxRpm = 160; // 160 rpm max as per Align power feed
 const int stepsPerRev = 200;
 
-volatile bool isLeft = false;
-volatile bool isRight = false;
-volatile bool isRapid = false;
+// volatile bool isLeft = false;
+// volatile bool isRight = false;
+// volatile bool isRapid = false;
 
 int speed = 0;
-int rapidSpeed = 0;
+int rapidSpeed = maxDriverFreq;
 
-int32_t leftStop = INT32_MIN;
-int32_t rightStop = INT32_MAX;
-bool isLeftStopSet = false;
-bool isRightStopSet = false;
+// int32_t leftStop = INT32_MIN;
+// int32_t rightStop = INT32_MAX;
+// bool isLeftStopSet = false;
+// bool isRightStopSet = false;
 
-bool requiresStop = false;
+// State currentState = State::STOPPED;
 
-FastAccelStepperEngine engine = FastAccelStepperEngine();
-FastAccelStepper *stepper = NULL;
+std::shared_ptr<Stepper> stepper;
+StateMachine* myState;
 
-enum State {
-  STOPPED,
-  RUNNING,
-  STOPPING
-};
-
-State state = STOPPED;
-
-void leftInterrupt() {
-  bool leftState = digitalRead(leftPin);
-  if(!isLeft && leftState && !stepper->isRunning()) {
-    //from stop to run left
-    isLeft = true;
-    requiresStop = false;
-  } else if(isLeft && !leftState && stepper->isRunning()) {
-    //from left to middle
-    isLeft = false;
-    requiresStop = true;
-  }
-}
-
-void rightInterrupt() {
-  bool rightState = digitalRead(rightPin);
-  if(!isRight && rightState && !stepper->isRunning()) {
-    //from stop to run right
-    isRight = true;
-    requiresStop = false;
-  } else if(isRight && !rightState && stepper->isRunning()) {
-    //from right to middle
-    isRight = false;
-    requiresStop = true;
-  }
-}
-
-void rapidInterrupt() {
-  isRapid = digitalRead(rapidPin) == HIGH;
-}
-
-void leftStopInterrupt() {
-  if(stepper->isRunning()) {
-    //ignore, we are moving
-    //TODO flash warning on oled
-    return;
-  }
-  if(isLeftStopSet) {
-    leftStop = stepper->getCurrentPosition();
-    isLeftStopSet = true;
-  }
-  else {
-    leftStop = INT32_MIN;
-    isLeftStopSet = false;
-  }
-}
-
-void rightStopInterrupt() {
-  if(stepper->isRunning()) {
-    //ignore, we are moving
-    //TODO flash warning on oled
-    return;
-  }
-
-  if(isRightStopSet) {
-    rightStop = stepper->getCurrentPosition();
-    isRightStopSet = true;
-  }
-  else {
-    rightStop = INT32_MAX;
-    isRightStopSet = false;
-  }
-}
-
-void updateSpeed(int32_t aSpeed){
-  if(stepper->getSpeedInMilliHz() <= aSpeed + (aSpeed*0.05) && stepper->getSpeedInMilliHz() >= aSpeed - (aSpeed*0.05)) {
-    //within 0.5% of the target speed, good enough.
-    return;
-  }
-  else {
-    stepper->setSpeedInMilliHz(aSpeed);
-  }
-}
+// Create Bounce objects for debouncing interrupts
+Bounce2::Button leftDebouncer = Bounce2::Button();
+Bounce2::Button rightDebouncer = Bounce2::Button();
+Bounce2::Button rapidButtonDebouncer = Bounce2::Button();
+Bounce2::Button leftStopButtonDebouncer = Bounce2::Button();
+Bounce2::Button rightStopButtonDebouncer = Bounce2::Button();
 
 void setup() {
-  engine.init();
-  stepper = engine.stepperConnectToPin(stepPinStepper);
-  if (stepper) {
-    stepper->setDirectionPin(dirPinStepper);
-    stepper->setEnablePin(enablePinStepper);
-    stepper->setAutoEnable(true);
-    stepper->setDelayToDisable(200);
-    stepper->setAcceleration(1000);
-  }
-  pinMode(leftPin, INPUT_PULLUP);
-  pinMode(rightPin, INPUT_PULLUP);
-  pinMode(rapidPin, INPUT_PULLUP);
-  pinMode(stopLeftPin, INPUT_PULLUP);
-  pinMode(stopRightPin, INPUT_PULLUP);\
+  Serial.begin(9600);
 
-  attachInterrupt(digitalPinToInterrupt(stopLeftPin), leftStopInterrupt, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(stopRightPin), rightStopInterrupt, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(leftPin), leftInterrupt, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(rightPin), rightInterrupt, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(rapidPin), rapidInterrupt, CHANGE);
+  stepper = std::make_shared<Stepper>(dirPinStepper, enablePinStepper, stepPinStepper, rapidSpeed);
+  
+  pinMode(leftPin, INPUT_PULLDOWN);
+  pinMode(rightPin, INPUT_PULLDOWN);
+  pinMode(rapidPin, INPUT_PULLDOWN);
+  pinMode(stopLeftPin, INPUT_PULLDOWN);
+  pinMode(stopRightPin, INPUT_PULLDOWN);
+
+//Bounce2::Button leftButtonDebouncer = Bounce2::Button();
+// Bounce2::Button rightButtonDebouncer = Bounce2::Button();
+// Bounce2::Button rapidButtonDebouncer = Bounce2::Button();
+// Bounce2::Button leftStopButtonDebouncer = Bounce2::Button();
+// Bounce2::Button rightStopButtonDebouncer = Bounce2::Button();
+  leftDebouncer.attach( leftPin, INPUT_PULLDOWN );
+  leftDebouncer.interval(5);
+  leftDebouncer.setPressedState(HIGH);
+  rightDebouncer.attach( rightPin, INPUT_PULLDOWN );
+  rightDebouncer.interval(5);
+  rightDebouncer.setPressedState(HIGH);
+  rapidButtonDebouncer.attach( rapidPin, INPUT_PULLDOWN );
+  rapidButtonDebouncer.interval(5);
+  rapidButtonDebouncer.setPressedState(HIGH);
+  leftStopButtonDebouncer.attach( stopLeftPin, INPUT_PULLDOWN );
+  leftStopButtonDebouncer.interval(5);
+  leftStopButtonDebouncer.setPressedState(HIGH);
+  rightStopButtonDebouncer.attach( stopRightPin, INPUT_PULLDOWN );
+  rightStopButtonDebouncer.interval(5);
+  rightStopButtonDebouncer.setPressedState(HIGH);
+
+  myState = new StateMachine(stepper);
+  // attachInterrupt(digitalPinToInterrupt(stopLeftPin), leftStopInterrupt, CHANGE);
+  // attachInterrupt(digitalPinToInterrupt(stopRightPin), rightStopInterrupt, CHANGE);
+  // attachInterrupt(digitalPinToInterrupt(leftPin), leftInterrupt, CHANGE);
+  // attachInterrupt(digitalPinToInterrupt(rightPin), rightInterrupt, CHANGE);
+  // attachInterrupt(digitalPinToInterrupt(rapidPin), rapidInterrupt, CHANGE);
+  Serial.println("Setup complete");
 }
 
 void loop() {
-  speed = map(analogRead(speedPin), 0, 1023, 0, maxDriverFreq);
-  rapidSpeed = map(analogRead(maxSpeedPin), 0, 1023, 0, maxDriverFreq);
-
-  if (stepper) {
-
-  if(speed == 0 && stepper->isRunning()) {
-    stepper->stopMove();
-    state = STOPPING;
-    return;
-  }
-
-  if(requiresStop && stepper->isRunning()) {
-    stepper->stopMove();
-    state = STOPPING;
-    return;
-  }
-
-  //let it come to a complete stop before changing direction
-  if(stepper->isStopping()) {
-    return;
-  }
   
-  if(!stepper->isRunning() && !stepper->isStopping()) {
-    if(isLeft) {
-      stepper->moveTo(leftStop);
-    } else if(isRight) {
-      stepper->moveTo(rightStop);
-    }
+  //Update all switches
+  leftDebouncer.update();
+  rightDebouncer.update();
+  rapidButtonDebouncer.update();
+  leftStopButtonDebouncer.update();
+  rightStopButtonDebouncer.update();
+
+  speed = map(analogRead(speedPin), 0, 1023, 0, maxDriverFreq);
+
+  //if the new speed is within .5% of the current speed, don't bother updating it
+  if(stepper->GetNormalSpeed() <= speed + (speed*0.05) && stepper->GetNormalSpeed() >= speed - (speed*0.05)) {
+    //noop
+  } else {
+    myState->processEvent(Event::UpdateSpeed, new UpdateSpeedEventData(speed, rapidSpeed));
   }
 
-  if(stepper->isRunning() && isRapid) {
-    updateSpeed(rapidSpeed);
-  } else if (stepper->isRunning() && !isRapid) {
-    updateSpeed(speed);
+  if(leftDebouncer.rose()) {
+    myState->processEvent(Event::LeftPressed);
   }
+
+  if(leftDebouncer.fell()) {
+    myState->processEvent(Event::LeftReleased);
+  }
+
+  if(rightDebouncer.rose()) {
+    myState->processEvent(Event::RightPressed);
+  }
+
+  if(rightDebouncer.fell()) {
+    myState->processEvent(Event::RightReleased);
+  }
+
+  if(rapidButtonDebouncer.rose()) {
+    myState->processEvent(Event::RapidPressed);
+  }
+
+  if(rapidButtonDebouncer.fell()) {
+    myState->processEvent(Event::RapidReleased);
+  }
+
+  //30fps :D
+  delay(33.33);
 }
