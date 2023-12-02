@@ -11,6 +11,7 @@
 #include <memory>
 #include "stepper.h"
 #include "state.h"
+#include <esp_log.h>
 
 #define dirPinStepper 4
 #define enablePinStepper 5
@@ -29,21 +30,10 @@ const int maxDriverFreq = 20000000; // 20kHz max pulse freq in millihz at 25/70 
 const int maxRpm = 160; // 160 rpm max as per Align power feed
 const int stepsPerRev = 200;
 
-// volatile bool isLeft = false;
-// volatile bool isRight = false;
-// volatile bool isRapid = false;
-
 int speed = 0;
 int rapidSpeed = maxDriverFreq;
 
-// int32_t leftStop = INT32_MIN;
-// int32_t rightStop = INT32_MAX;
-// bool isLeftStopSet = false;
-// bool isRightStopSet = false;
-
-// State currentState = State::STOPPED;
-
-std::shared_ptr<Stepper> stepper;
+Stepper* stepper;
 StateMachine* myState;
 
 // Create Bounce objects for debouncing interrupts
@@ -55,20 +45,19 @@ Bounce2::Button rightStopButtonDebouncer = Bounce2::Button();
 
 void setup() {
   Serial.begin(9600);
-
-  stepper = std::make_shared<Stepper>(dirPinStepper, enablePinStepper, stepPinStepper, rapidSpeed);
-  
-  pinMode(leftPin, INPUT_PULLDOWN);
+  int size = uxTaskGetStackHighWaterMark(NULL);
+  ESP_LOGI("Setup", "Stack high water mark: %d\n", size);  
+  stepper = new Stepper();
+  size = uxTaskGetStackHighWaterMark(NULL);
+  ESP_LOGI("Setup", "Stack high water mark: %d\n", size); 
+  stepper->Init(dirPinStepper, enablePinStepper, stepPinStepper, rapidSpeed);
+  size = uxTaskGetStackHighWaterMark(NULL);
+  ESP_LOGI("Setup", "Stack high water mark: %d\n", size);
   pinMode(rightPin, INPUT_PULLDOWN);
   pinMode(rapidPin, INPUT_PULLDOWN);
   pinMode(stopLeftPin, INPUT_PULLDOWN);
   pinMode(stopRightPin, INPUT_PULLDOWN);
 
-//Bounce2::Button leftButtonDebouncer = Bounce2::Button();
-// Bounce2::Button rightButtonDebouncer = Bounce2::Button();
-// Bounce2::Button rapidButtonDebouncer = Bounce2::Button();
-// Bounce2::Button leftStopButtonDebouncer = Bounce2::Button();
-// Bounce2::Button rightStopButtonDebouncer = Bounce2::Button();
   leftDebouncer.attach( leftPin, INPUT_PULLDOWN );
   leftDebouncer.interval(5);
   leftDebouncer.setPressedState(HIGH);
@@ -86,64 +75,66 @@ void setup() {
   rightStopButtonDebouncer.setPressedState(HIGH);
 
   myState = new StateMachine(stepper);
-  // attachInterrupt(digitalPinToInterrupt(stopLeftPin), leftStopInterrupt, CHANGE);
-  // attachInterrupt(digitalPinToInterrupt(stopRightPin), rightStopInterrupt, CHANGE);
-  // attachInterrupt(digitalPinToInterrupt(leftPin), leftInterrupt, CHANGE);
-  // attachInterrupt(digitalPinToInterrupt(rightPin), rightInterrupt, CHANGE);
-  // attachInterrupt(digitalPinToInterrupt(rapidPin), rapidInterrupt, CHANGE);
   Serial.println("Setup complete");
 }
 
 void UpdateTask(void * pvParameters) {
-  
-  //Update all switches
-  leftDebouncer.update();
-  rightDebouncer.update();
-  rapidButtonDebouncer.update();
-  leftStopButtonDebouncer.update();
-  rightStopButtonDebouncer.update();
+  while(true) {
+    int size = uxTaskGetStackHighWaterMark(NULL);
+    ESP_LOGI("Setup", "Stack high water mark: %d\n", size);
+    //Update all switches
+    leftDebouncer.update();
+    rightDebouncer.update();
+    rapidButtonDebouncer.update();
+    leftStopButtonDebouncer.update();
+    rightStopButtonDebouncer.update();
 
-  speed = map(analogRead(speedPin), 0, 1023, 0, maxDriverFreq);
+    speed = map(analogRead(speedPin), 0, 1023, 0, maxDriverFreq);
 
-  //if the new speed is within .5% of the current speed, don't bother updating it
-  if(stepper->GetNormalSpeed() <= speed + (speed*0.05) && stepper->GetNormalSpeed() >= speed - (speed*0.05)) {
-    //noop
-  } else {
-    myState->processEvent(Event::UpdateSpeed, new UpdateSpeedEventData(speed, rapidSpeed));
+    //if the new speed is within .5% of the current speed, don't bother updating it
+    if(stepper->GetNormalSpeed() <= speed + (speed*0.05) && stepper->GetNormalSpeed() >= speed - (speed*0.05)) {
+      //noop
+    } else {
+      // Assuming processEvent takes a unique_ptr
+      myState->processEvent(Event::UpdateSpeed, std::make_unique<UpdateSpeedEventData>(speed, rapidSpeed));
+    }
+
+    if(leftDebouncer.rose()) {
+      myState->processEvent(Event::LeftPressed);
+    }
+
+    if(leftDebouncer.fell()) {
+      myState->processEvent(Event::LeftReleased);
+    }
+
+    if(rightDebouncer.rose()) {
+      myState->processEvent(Event::RightPressed);
+    }
+
+    if(rightDebouncer.fell()) {
+      myState->processEvent(Event::RightReleased);
+    }
+
+    if(rapidButtonDebouncer.rose()) {
+      myState->processEvent(Event::RapidPressed);
+    }
+
+    if(rapidButtonDebouncer.fell()) {
+      myState->processEvent(Event::RapidReleased);
+    }
+    
+    //30fps :D
+    vTaskDelay(33.33 / portTICK_PERIOD_MS);
   }
-
-  if(leftDebouncer.rose()) {
-    myState->processEvent(Event::LeftPressed);
-  }
-
-  if(leftDebouncer.fell()) {
-    myState->processEvent(Event::LeftReleased);
-  }
-
-  if(rightDebouncer.rose()) {
-    myState->processEvent(Event::RightPressed);
-  }
-
-  if(rightDebouncer.fell()) {
-    myState->processEvent(Event::RightReleased);
-  }
-
-  if(rapidButtonDebouncer.rose()) {
-    myState->processEvent(Event::RapidPressed);
-  }
-
-  if(rapidButtonDebouncer.fell()) {
-    myState->processEvent(Event::RapidReleased);
-  }
-
-  //30fps :D
-  delay(33.33);
 }
+
+TaskHandle_t loopTaskHandle = NULL;
 
 extern "C" void app_main()
 {
   setup();
 
 //xTaskCreateUniversal(loopTask, "loopTask", getArduinoLoopTaskStackSize(), NULL, 1, &loopTaskHandle, ARDUINO_RUNNING_CORE);
-  xTaskCreatePinnedToCore(&UpdateTask,"main loop", 8192*2, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(&UpdateTask,"main loop", 8192*4, NULL, 1, &loopTaskHandle, 0);
+
 }

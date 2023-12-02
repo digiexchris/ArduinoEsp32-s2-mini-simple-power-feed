@@ -4,7 +4,8 @@
 
 class Stepper {
     public:
-        Stepper(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed);
+    //TODO implement mutexes in all of these!!!
+        void Init(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed);
         void UpdateNormalSpeed(int16_t speed);
         void UpdateRapidSpeed(int16_t speed);
         void MoveLeft();

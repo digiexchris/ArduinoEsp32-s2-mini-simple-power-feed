@@ -1,10 +1,10 @@
 #include "FastAccelStepper.h"
 #include "stepper.h"
 
-Stepper::Stepper(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed): myRapidSpeed(rapidSpeed) {
+void Stepper::Init(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed){
     myEngine.init();
-    FastAccelStepper* myStepper = myEngine.stepperConnectToPin(stepPin);
-    
+    myStepper = myEngine.stepperConnectToPin(stepPin);
+    myRapidSpeed = rapidSpeed;
     if (myStepper) {
         myStepper->setDirectionPin(dirPin);
         myStepper->setEnablePin(enablePin);
