@@ -10,6 +10,7 @@
 #include "FastAccelStepper.h"
 #include <memory>
 #include "stepper.h"
+#include "state.h"
 
 #define dirPinStepper 4
 #define enablePinStepper 5
@@ -28,37 +29,22 @@ const int maxDriverFreq = 20000000; // 20kHz max pulse freq in millihz at 25/70 
 const int maxRpm = 160; // 160 rpm max as per Align power feed
 const int stepsPerRev = 200;
 
-volatile bool isLeft = false;
-volatile bool isRight = false;
-volatile bool isRapid = false;
+// volatile bool isLeft = false;
+// volatile bool isRight = false;
+// volatile bool isRapid = false;
 
 int speed = 0;
-int rapidSpeed = 0;
+int rapidSpeed = maxDriverFreq;
 
 // int32_t leftStop = INT32_MIN;
 // int32_t rightStop = INT32_MAX;
-bool isLeftStopSet = false;
-bool isRightStopSet = false;
+// bool isLeftStopSet = false;
+// bool isRightStopSet = false;
 
-bool requiresStop = false;
-
-enum Direction {
-  LEFT,
-  RIGHT
-};
-
-Direction currentDirection = Direction::LEFT;
-
-enum State {
-  STOPPED,
-  MOVING,
-  RAPID,
-  STOPPING
-};
-
-State currentState = State::STOPPED;
+// State currentState = State::STOPPED;
 
 std::shared_ptr<Stepper> stepper;
+StateMachine* myState;
 
 // Create Bounce objects for debouncing interrupts
 Bounce2::Button leftDebouncer = Bounce2::Button();
@@ -70,7 +56,7 @@ Bounce2::Button rightStopButtonDebouncer = Bounce2::Button();
 void setup() {
   Serial.begin(9600);
 
-  stepper = std::make_shared<Stepper>(dirPinStepper, enablePinStepper, stepPinStepper);
+  stepper = std::make_shared<Stepper>(dirPinStepper, enablePinStepper, stepPinStepper, rapidSpeed);
   
   pinMode(leftPin, INPUT_PULLDOWN);
   pinMode(rightPin, INPUT_PULLDOWN);
@@ -99,7 +85,7 @@ void setup() {
   rightStopButtonDebouncer.interval(5);
   rightStopButtonDebouncer.setPressedState(HIGH);
 
-
+  myState = new StateMachine(stepper);
   // attachInterrupt(digitalPinToInterrupt(stopLeftPin), leftStopInterrupt, CHANGE);
   // attachInterrupt(digitalPinToInterrupt(stopRightPin), rightStopInterrupt, CHANGE);
   // attachInterrupt(digitalPinToInterrupt(leftPin), leftInterrupt, CHANGE);
@@ -118,88 +104,38 @@ void loop() {
   rightStopButtonDebouncer.update();
 
   speed = map(analogRead(speedPin), 0, 1023, 0, maxDriverFreq);
-  rapidSpeed = 1023;//map(analogRead(maxSpeedPin), 0, 1023, 0, maxDriverFreq);
-  //Serial.println("Speed: " + String(speed) + " Rapid: " + String(rapidSpeed));
 
-  if (stepper) {
-
-    //if we're changing direction, or if a direction was unset, a stop is required.
-    //The Align disconnects the clutch at the same time, so due to deceleration, the position will get lost
-    //TODO add a pendant with move to stop buttons that cause the isLeft and isRight to be ignored.
-    //TODO this basically means the stops don't work properly and lose position when we stop.
-    //perhaps the workflow is to leave the handle engaged, use a jog button or encoder on the pendant to move to the stop
-    //using the non rapid speed, then hit a button to set the corresponding stop.
-    //then we need a moveToLeft and moveToRight buttons.
-    //the handle probably should engage a runContinuous mode instead of moveTo(stop).
-    if(stepper->isRunning() && !leftDebouncer.isPressed() && !rightDebouncer.isPressed()) {
-      Serial.println("Requires stop");
-      currentState = STOPPING;
-      stepper->stopMove();
-      return;
-    }
-
-    //let it come to a complete stop before changing direction, but if the new direction is the same as the current direction,
-    //we can cancel the stop and start the move again
-    if(stepper->isStopping()) {
-      Serial.println("Stopping");
-      if(currentDirection == LEFT && leftDebouncer.isPressed() && currentState != MOVING) {
-        currentState = MOVING;
-        stepper->moveTo(leftStop);
-        // delay(10);
-      } else if(currentDirection == RIGHT && rightDebouncer.isPressed()  && currentState != MOVING) {
-        currentState = MOVING;
-        stepper->moveTo(rightStop);
-        // delay(10);
-      } else {
-        return;
-      }
-    }
-    
-    //is stopped basically, but there are a few other cases like Running Continuously
-    //that should still be handled by isRunning
-    if(!stepper->isRunning() && !stepper->isStopping()) {
-      if(leftDebouncer.isPressed() && currentState != MOVING) {
-        Serial.println("Moving left");
-        currentState = MOVING;
-        stepper->moveTo(leftStop);
-      } else if(rightDebouncer.isPressed() && currentState != MOVING) {
-        Serial.println("Moving right");
-        currentState = MOVING;
-        stepper->moveTo(rightStop);
-      } else {
-        // if(stepper->currentState != State::STOPPED) {
-        //   Serial.println("Stopped");
-        //   currentState = State::STOPPED;
-        // }
-      }
-    }
-
-    //cranked the speed pot to zero. FastAccelStepper ignores zero speed, so stop instead.
-    //the case above should restart it when we turn the knob back up again.
-    if(speed <= 50 && stepper->isRunning()) {
-      Serial.println("Speed is zero");
-      stepper->stopMove();
-      currentState = STOPPING;
-      return;
-    }
-
-    //finally, if we're moving, update the speeds
-    if(stepper->isRunning() && rapidButtonDebouncer.isPressed()) {
-      if(currentState != RAPID)
-      {
-        Serial.println("Rapid speed");
-      currentState = RAPID;
-      updateSpeed(rapidSpeed);
-      }
-    } else if (stepper->isRunning() && !rapidButtonDebouncer.isPressed()) {
-      if(currentState != MOVING)
-      {
-        Serial.println("Normal speed");
-        currentState = MOVING;
-        updateSpeed(speed);
-      } else {
-        updateSpeed(speed);
-      }
-    }
+  //if the new speed is within .5% of the current speed, don't bother updating it
+  if(stepper->GetNormalSpeed() <= speed + (speed*0.05) && stepper->GetNormalSpeed() >= speed - (speed*0.05)) {
+    //noop
+  } else {
+    myState->processEvent(Event::UpdateSpeed, new UpdateSpeedEventData(speed, rapidSpeed));
   }
+
+  if(leftDebouncer.rose()) {
+    myState->processEvent(Event::LeftPressed);
+  }
+
+  if(leftDebouncer.fell()) {
+    myState->processEvent(Event::LeftReleased);
+  }
+
+  if(rightDebouncer.rose()) {
+    myState->processEvent(Event::RightPressed);
+  }
+
+  if(rightDebouncer.fell()) {
+    myState->processEvent(Event::RightReleased);
+  }
+
+  if(rapidButtonDebouncer.rose()) {
+    myState->processEvent(Event::RapidPressed);
+  }
+
+  if(rapidButtonDebouncer.fell()) {
+    myState->processEvent(Event::RapidReleased);
+  }
+
+  //30fps :D
+  delay(33.33);
 }

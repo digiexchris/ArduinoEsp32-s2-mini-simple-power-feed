@@ -18,11 +18,24 @@ enum class Event {
     UpdateSpeed
 };
 
+class EventData {
+
+};
+
+class UpdateSpeedEventData : public EventData {
+public:
+    UpdateSpeedEventData(int16_t aNormalSpeed, int16_t aRapidSpeed) 
+    : myNormalSpeed(aNormalSpeed),
+    myRapidSpeed(aRapidSpeed) {};
+    int16_t myNormalSpeed;
+    int16_t myRapidSpeed;
+};
+
 class StateMachine {
 public:
     StateMachine(std::shared_ptr<Stepper> aStepper) : currentState(State::Stopped), myStepper(aStepper) {}
 
-    void processEvent(Event event) {
+    void processEvent(Event event, EventData* data = nullptr) {
         switch (currentState) {
             case State::Stopped:
                 if (event == Event::LeftPressed) {
@@ -47,7 +60,8 @@ public:
                 } else if (event == Event::RapidReleased) {
                     myStepper->SetNormalSpeed();
                 } else if (event == Event::UpdateSpeed) {
-                    myStepper->UpdateSpeed(/**placeholder for the speed passed in the event*/);
+                    myStepper->UpdateNormalSpeed(static_cast<UpdateSpeedEventData*>(data)->myNormalSpeed);
+                    myStepper->UpdateRapidSpeed(static_cast<UpdateSpeedEventData*>(data)->myRapidSpeed);
                 }
                 break;
 
