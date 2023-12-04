@@ -1,12 +1,21 @@
-#pragma once
+
+#ifndef STATE_H
+#define STATE_H
+
 #include <memory>
 #include "stepper.h"
 
 enum class State {
-    Moving,
-    MovingRapid,
-    Stopping,
+    MovingLeft,
+    MovingRight,
+    StoppingLeft,
+    StoppingRight,
     Stopped
+};
+
+enum class SpeedState {
+    Normal,
+    Rapid
 };
 
 enum class Event {
@@ -34,11 +43,22 @@ public:
 
 class StateMachine {
 public:
-    StateMachine(Stepper* aStepper);
+    StateMachine(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed);
 
     void processEvent(Event event, std::unique_ptr<EventData> data = nullptr);
 
 private:
+    void MoveLeftAction();
+    void MoveRightAction();
+    void RapidSpeedAction();
+    void NormalSpeedAction();
+    void UpdateSpeedAction(std::unique_ptr<EventData> data);
+    void StopLeftAction();
+    void StopRightAction();
+
     State currentState;
+    SpeedState currentSpeedState; //TODO probably don't need this, if we can update using debouncer.Changed()
     Stepper* myStepper;
 };
+
+#endif // STATE_H
