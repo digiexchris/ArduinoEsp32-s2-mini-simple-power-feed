@@ -4,9 +4,9 @@ StateMachine::StateMachine(int dirPin, int enablePin, int stepPin, uint16_t rapi
     myStepper = new Stepper();
     myStepper->Init(dirPin, enablePin, stepPin, rapidSpeed);
     myEventQueue = xQueueCreate( 10, sizeof( Event ) );
-    xTaskCreate(&StateMachine::ProcessEventQueueTask, "ProcessEventQueueTask", 2048, this, 5, NULL);
+    xTaskCreate(&StateMachine::ProcessEventQueueTask, "ProcessEventQueueTask", 2048*16, this, 5, NULL);
     myUpdateSpeedQueue = xQueueCreate( 10, sizeof( UpdateSpeedEventData ) );
-    xTaskCreate(&StateMachine::ProcessUpdateSpeedQueueTask, "ProcessUpdateSpeedQueueTask", 2048, this, 5, NULL);
+    xTaskCreate(&StateMachine::ProcessUpdateSpeedQueueTask, "ProcessUpdateSpeedQueueTask", 2048*8, this, 5, NULL);
     ESP_LOGI("state.cpp", "Stepper init complete");
 }
 

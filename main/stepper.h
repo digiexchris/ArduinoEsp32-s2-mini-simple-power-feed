@@ -7,9 +7,14 @@
 
 class Stepper {
     public:
+
+    enum class StepperDirection {
+        Left = true,
+        Right = false
+    };
     //TODO implement mutexes in all of these!!!
         Stepper();
-        void Init(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed);
+        void Init(uint8_t dirPin, uint8_t enablePin, uint8_t stepPin, uint16_t rapidSpeed);
         void UpdateNormalSpeed(int16_t speed);
         void UpdateRapidSpeed(int16_t speed);
         void MoveLeft();
@@ -20,10 +25,16 @@ class Stepper {
         
         bool IsStopped();
     private:
-        FastAccelStepper* myStepper;
+        
         void UpdateActiveSpeed();
         
+        #ifdef USE_DENDO_STEPPER
+        DendoStepper myStepper;
+        DendoStepper_config_t myStepperCfg;
+        #elif USE_FASTACCELSTEPPER
         FastAccelStepperEngine myEngine = FastAccelStepperEngine();
+        FastAccelStepper* myStepper;
+        #endif
         bool myUseRapidSpeed = false;
         
         uint16_t myRapidSpeed;
