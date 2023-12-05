@@ -4,6 +4,9 @@
 
 #include <memory>
 #include "stepper.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
 
 enum class State {
     MovingLeft,

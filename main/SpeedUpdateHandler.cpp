@@ -3,6 +3,7 @@
 #include <esp_adc_cal.h>
 #include <esp_err.h>
 #include <freertos/FreeRTOS.h>
+#include "config.h"
 
 SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, std::shared_ptr<StateMachine> aStateMachine, uint32_t maxDriverFreq) {
     speedPin = aSpeedPin;

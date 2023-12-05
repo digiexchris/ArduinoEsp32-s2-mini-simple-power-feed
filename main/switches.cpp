@@ -5,6 +5,9 @@
 #include <driver/gpio.h>
 #include "state.h"
 
+#error THIS IS BROKEN without bounce2, kill bounce2 and any arduino dependency.
+https://github.com/craftmetrics/esp32-button
+
 Switches::Switches(
     std::shared_ptr<StateMachine> aStateMachine, 
     int leftPin, 

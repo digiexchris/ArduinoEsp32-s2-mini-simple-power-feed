@@ -79,6 +79,7 @@ void Stepper::UpdateActiveSpeed() {
             //decelerating
             const uint16_t accTime = myStepper.getAcc();
             const uint16_t decTime = FULL_SPEED_DECELERATION_LINEAR_TIME*(aSpeed/MAX_DRIVER_STEPS_PER_SECOND);
+            //#error major error, this needs to be in ms, currently passed in seconds I think
             myStepper.setSpeed(aSpeed, accTime, decTime);
         } else {
             //accelerating

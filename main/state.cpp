@@ -1,4 +1,5 @@
 #include "state.h"
+#include "config.h"
 
 StateMachine::StateMachine(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed) : currentState(State::Stopped), currentSpeedState(SpeedState::Normal) {
     myStepper = new Stepper();

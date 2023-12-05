@@ -1,7 +1,11 @@
 #ifndef STEPPER_H
 #define STEPPER_H
 
+#ifdef USE_DENDO_STEPPER
+#include "DendoStepper.h"
+#elif USE_FASTACCELSTEPPER
 #include "FastAccelStepper.h"
+#endif
 #include <memory>
 #include <mutex>
 

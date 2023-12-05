@@ -24,6 +24,8 @@ const int stepsPerRev = 200;
     const uint16_t FULL_SPEED_ACCELERATION_LINEAR_TIME = MAX_DRIVER_STEPS_PER_SECOND / ACCELERATION;
     const uint16_t FULL_SPEED_DECELERATION_LINEAR_TIME = MAX_DRIVER_STEPS_PER_SECOND / ACCELERATION;
 
+    #define ESP_LOGI(tag, format, ...) printf(format, ##__VA_ARGS__)
+    #define ESP_LOGE(tag, format, ...) printf(format, ##__VA_ARGS__)
 
 #ifdef USE_DENDO_STEPPER
 
