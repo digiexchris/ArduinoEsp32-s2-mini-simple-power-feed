@@ -3,8 +3,51 @@
 StateMachine::StateMachine(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed) : currentState(State::Stopped), currentSpeedState(SpeedState::Normal) {
     myStepper = new Stepper();
     myStepper->Init(dirPin, enablePin, stepPin, rapidSpeed);
-
+    myEventQueue = xQueueCreate( 10, sizeof( Event ) );
+    xTaskCreate(&StateMachine::ProcessEventQueueTask, "ProcessEventQueueTask", 2048, this, 5, NULL);
+    myUpdateSpeedQueue = xQueueCreate( 10, sizeof( UpdateSpeedEventData ) );
+    xTaskCreate(&StateMachine::ProcessUpdateSpeedQueueTask, "ProcessUpdateSpeedQueueTask", 2048, this, 5, NULL);
     ESP_LOGI("state.cpp", "Stepper init complete");
+}
+
+bool StateMachine::AddEvent(Event event) {
+    //ESP_LOGI("state.cpp", "Adding event to queue");
+    if(xQueueSend( myEventQueue, &event, 0 ) != pdPASS) {
+        ESP_LOGE("state.cpp", "Failed to send event to queue");
+        return false;
+    }
+    //ESP_LOGI("state.cpp", "Event added to queue");
+    return true;
+}
+
+void StateMachine::ProcessEventQueueTask(void* params) {
+    StateMachine* stateMachine = static_cast<StateMachine*>(params);
+    while(true) {
+        
+        Event event;
+        xQueueReceive(stateMachine->myEventQueue, &event, portMAX_DELAY);
+        stateMachine->processEvent(event);
+    }
+}
+
+void StateMachine::ProcessUpdateSpeedQueueTask(void* params) {
+    StateMachine* stateMachine = static_cast<StateMachine*>(params);
+    while(true) {
+        
+        UpdateSpeedEventData eventData;
+        xQueueReceive(stateMachine->myUpdateSpeedQueue, &eventData, portMAX_DELAY);
+        stateMachine->processSpeedEvent(eventData);
+    }
+}
+
+bool StateMachine::AddUpdateSpeedEvent(UpdateSpeedEventData* eventData) {
+    //ESP_LOGI("state.cpp", "Adding update speed event to queue");
+    if(xQueueSend( myUpdateSpeedQueue, eventData, 0 ) != pdPASS) {
+        ESP_LOGE("state.cpp", "Failed to send update speed event to queue");
+        return false;
+    }
+    //ESP_LOGI("state.cpp", "Update speed event added to queue");
+    return true;
 }
 
 void StateMachine::MoveLeftAction() {
@@ -51,15 +94,14 @@ void StateMachine::NormalSpeedAction() {
     //ESP_LOGI("state.cpp", "Done requesting stepper set normal speed");
 }
 
-void StateMachine::UpdateSpeedAction(std::unique_ptr<EventData> eventData) {
+void StateMachine::UpdateSpeedAction(UpdateSpeedEventData eventData) {
     //ESP_LOGI("state.cpp", "Update speeds");
     if(myStepper->IsStopped()) {
         currentState = State::Stopped;
-        myStepper->UpdateNormalSpeed(0);
+        //myStepper->UpdateNormalSpeed(0);
     }
-    UpdateSpeedEventData data = *static_cast<UpdateSpeedEventData*>(eventData.get());
-    myStepper->UpdateNormalSpeed(data.myNormalSpeed);
-    myStepper->UpdateRapidSpeed(data.myRapidSpeed);
+    myStepper->UpdateNormalSpeed(eventData.myNormalSpeed);
+    myStepper->UpdateRapidSpeed(eventData.myRapidSpeed);
     //ESP_LOGI("state.cpp", "Done requesting stepper update speeds");
 }
 
@@ -77,7 +119,7 @@ void StateMachine::StopRightAction() {
     //ESP_LOGI("state.cpp", "Done requesting stepper stop");
 }
 
-void StateMachine::processEvent(Event event, std::unique_ptr<EventData> eventData) {
+void StateMachine::processEvent(Event event) {
     switch (currentState) {
         case State::Stopped:
             //ESP_LOGI("state.cpp", "State is stopped");
@@ -106,26 +148,38 @@ void StateMachine::processEvent(Event event, std::unique_ptr<EventData> eventDat
             if (event == Event::LeftPressed) {
                 MoveLeftAction();
             } 
+            else if (event == Event::RightPressed) {
+                //Requeue, gotta wait till we're stopped first.
+                AddEvent(event);
+            }
             break;
 
         case State::StoppingRight:
             if (event == Event::RightPressed) {
                 MoveRightAction();
             } 
+            else if (event == Event::LeftPressed) {
+                //Requeue, gotta wait till we're stopped first.
+                AddEvent(event);
+            }
             break; 
+
+        default:    
+            break;
     }
 
     switch(event) {
         case Event::RapidPressed:
-            RapidSpeedAction();
-            break;
-        case Event::RapidReleased:
-            NormalSpeedAction();
-            break;
-        case Event::UpdateSpeed:
-            UpdateSpeedAction(std::move(eventData));
-            break;
-        default:
-            break;
+        RapidSpeedAction();
+        break;
+    case Event::RapidReleased:
+        NormalSpeedAction();
+        break;
+    default:
+        break;
     }
+}
+
+void StateMachine::processSpeedEvent(UpdateSpeedEventData eventData) {
+            UpdateSpeedAction(std::move(eventData));
 }

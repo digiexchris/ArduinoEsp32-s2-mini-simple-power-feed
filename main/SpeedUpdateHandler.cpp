@@ -10,6 +10,8 @@ SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, std::shared_ptr
     rapidSpeed = maxDriverFreq;
     myStateMachine = aStateMachine;
 
+    //pinMode(speedPin, INPUT);
+
     ESP_ERROR_CHECK(adc1_config_width(ADC_WIDTH_BIT_12));
     ESP_ERROR_CHECK(adc1_config_channel_atten(speedPin, ADC_ATTEN_DB_11));
 
@@ -66,9 +68,8 @@ void SpeedUpdateHandler::UpdateSpeeds() {
                 //todo myState should be a shared pointer instead of global.
                 //or maybe myState should be a singleton?
                 //or just a static global shared pointer?
-                myStateMachine->processEvent(
-                Event::UpdateSpeed, 
-                std::make_unique<UpdateSpeedEventData>(
+                myStateMachine->AddUpdateSpeedEvent(
+                new UpdateSpeedEventData(
                     mapAdcToSpeed(setSpeedADC, 0, 4095, 0, myMaxDriverFreq), 
                         rapidSpeed)
                 );
@@ -78,7 +79,7 @@ void SpeedUpdateHandler::UpdateSpeeds() {
         newSpeedMutex.unlock();
         setSpeedMutex.unlock();
         
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 

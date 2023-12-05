@@ -40,7 +40,7 @@ void Stepper::UpdateActiveSpeed() {
     const uint16_t curSpeed = myStepper->getSpeedInMilliHz()/1000;
     const bool isRunning = myStepper->isRunning();
 
-    if(isRunning && aSpeed != 0 && (curSpeed <= aSpeed - (aSpeed*0.05) || curSpeed >= aSpeed + (aSpeed*0.05))) {
+    if(aSpeed != 0 && (curSpeed <= aSpeed - (aSpeed*0.05) || curSpeed >= aSpeed + (aSpeed*0.05))) {
         ESP_LOGI("Stepper", "Speed is not within 0.5%% of target speed, updating");
         ESP_ERROR_CHECK(myStepper->setSpeedInHz(aSpeed));
         myStepper->applySpeedAcceleration();

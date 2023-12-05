@@ -34,6 +34,7 @@ class EventData {
 
 class UpdateSpeedEventData : public EventData {
 public:
+    UpdateSpeedEventData() {};
     UpdateSpeedEventData(int16_t aNormalSpeed, int16_t aRapidSpeed) 
         :   myNormalSpeed(aNormalSpeed),
             myRapidSpeed(aRapidSpeed) {};
@@ -44,21 +45,29 @@ public:
 class StateMachine {
 public:
     StateMachine(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed);
-
-    void processEvent(Event event, std::unique_ptr<EventData> data = nullptr);
+    bool AddEvent(Event event);
+    bool AddUpdateSpeedEvent(UpdateSpeedEventData* data);
 
 private:
     void MoveLeftAction();
     void MoveRightAction();
     void RapidSpeedAction();
     void NormalSpeedAction();
-    void UpdateSpeedAction(std::unique_ptr<EventData> data);
+    void UpdateSpeedAction(UpdateSpeedEventData data);
     void StopLeftAction();
     void StopRightAction();
+
+    static void ProcessEventQueueTask(void* params);
+    static void ProcessUpdateSpeedQueueTask(void* params);
+    void processEvent(Event event);
+    void processSpeedEvent(UpdateSpeedEventData data);
 
     State currentState;
     SpeedState currentSpeedState; //TODO probably don't need this, if we can update using debouncer.Changed()
     Stepper* myStepper;
+    TaskHandle_t myProcessQueueTaskHandle;
+    QueueHandle_t myEventQueue;
+    QueueHandle_t myUpdateSpeedQueue;
 };
 
 #endif // STATE_H
