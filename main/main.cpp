@@ -4,19 +4,14 @@
 //the stepper is a 60BYGH Nema23, but any stepper should work.
 //prioritize rpm over torque, since the align power feed has a relatively high gear ratio
 //if you reuse most of the clutch mechanism
-#include <Arduino.h>
-#include <Bounce2.h> // Include the Bounce2 library for debounce
 
-#include "FastAccelStepper.h"
 #include <memory>
-#include "stepper.h"
 #include "state.h"
 #include <esp_log.h>
 #include "config.h"
-#include <esp_adc_cal.h>
 #include <soc/adc_channel.h>
 #include "SpeedUpdateHandler.h"
-#include "switches.h"
+#include "debounce.h"
 
 // #define dirPinStepper 4
 // #define enablePinStepper 5
@@ -31,25 +26,47 @@
 
 //TODO add stop positions to oled display
 
-std::shared_ptr<SpeedUpdateHandler> mySpeedUpdateHandler;
-std::shared_ptr<StateMachine> myState;
-std::shared_ptr<Switches> mySwitches;
+static std::shared_ptr<SpeedUpdateHandler> mySpeedUpdateHandler;
+static std::shared_ptr<StateMachine> myState;
+Debouncer* leftSwitch;
+Debouncer* rightSwitch;
+Debouncer* rapidSwitch;
 
 void setup() {
   ESP_LOGI("main.cpp", "Setup start");
-  myState = std::make_shared<StateMachine>(dirPinStepper, enablePinStepper, stepPinStepper, maxDriverFreq);
-  mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState, maxDriverFreq);
-  mySwitches = std::make_shared<Switches>(myState, leftPin, rightPin, rapidPin);
-  ESP_LOGI("main.cpp", "Setup complete");
+  myState = std::make_shared<StateMachine>(dirPinStepper, enablePinStepper, stepPinStepper, MAX_DRIVER_STEPS_PER_SECOND);
+  mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState, MAX_DRIVER_STEPS_PER_SECOND);
+  leftSwitch = new Debouncer(myState, LEFTPIN, 50);
+  leftSwitch->setSwitchPressedEvent(Event::LeftPressed);
+  leftSwitch->setSwitchReleasedEvent(Event::LeftReleased);
+  // rightSwitch = new Debouncer(myState, RIGHTPIN, 50);
+  // rightSwitch->setSwitchPressedEvent(Event::RightPressed);
+  // rightSwitch->setSwitchReleasedEvent(Event::RightReleased);
+  // rapidSwitch = new Debouncer(myState, RAPIDPIN, 50);
+  // rapidSwitch->setSwitchPressedEvent(Event::RapidPressed);
+  // rapidSwitch->setSwitchReleasedEvent(Event::RapidReleased);
+  // ESP_LOGI("main.cpp", "Setup complete");
+
+  leftSwitch->start();
+  // rightSwitch->start();
+  // rapidSwitch->start();
 }
 
 extern "C" void app_main()
 {
   esp_log_level_set("main.cpp",ESP_LOG_ERROR);
-  esp_log_level_set("state.cpp",ESP_LOG_ERROR);
+  esp_log_level_set("state.cpp",ESP_LOG_INFO);
   esp_log_level_set("stepper.cpp",ESP_LOG_ERROR);
   setup();
 
+  while(1) {
+    vTaskDelay(portTICK_RATE_MS * 100);
+    
+  }
+
+  // while(1) {
+  //   vTaskDelay(portMAX_DELAY);
+  // }
 //xTaskCreateUniversal(loopTask, "loopTask", getArduinoLoopTaskStackSize(), NULL, 1, &loopTaskHandle, ARDUINO_RUNNING_CORE);
   //xTaskCreatePinnedToCore(&UpdateTask,"main loop", 8192*4, nullptr, 2, &loopTaskHandle, 1);
   //xTaskCreatePinnedToCore(&UpdateSpeedAverageTask,"update speed", 4048, nullptr, 1, nullptr, 0);

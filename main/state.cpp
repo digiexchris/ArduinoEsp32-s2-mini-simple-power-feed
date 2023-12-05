@@ -1,23 +1,25 @@
 #include "state.h"
+#include "config.h"
+#include <esp_log.h>
 
 StateMachine::StateMachine(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed) : currentState(State::Stopped), currentSpeedState(SpeedState::Normal) {
     myStepper = new Stepper();
     myStepper->Init(dirPin, enablePin, stepPin, rapidSpeed);
     myEventQueue = xQueueCreate( 10, sizeof( Event ) );
-    xTaskCreate(&StateMachine::ProcessEventQueueTask, "ProcessEventQueueTask", 2048, this, 5, NULL);
+    //xTaskCreate(&StateMachine::ProcessEventQueueTask, "ProcessEventQueueTask", 2048*16, this, 5, NULL);
     myUpdateSpeedQueue = xQueueCreate( 10, sizeof( UpdateSpeedEventData ) );
-    xTaskCreate(&StateMachine::ProcessUpdateSpeedQueueTask, "ProcessUpdateSpeedQueueTask", 2048, this, 5, NULL);
+    xTaskCreate(&StateMachine::ProcessUpdateSpeedQueueTask, "ProcessUpdateSpeedQueueTask", 2048*8, this, 5, NULL);
     ESP_LOGI("state.cpp", "Stepper init complete");
 }
 
-bool StateMachine::AddEvent(Event event) {
+void StateMachine::AddEvent(Event event) {
     //ESP_LOGI("state.cpp", "Adding event to queue");
     if(xQueueSend( myEventQueue, &event, 0 ) != pdPASS) {
         ESP_LOGE("state.cpp", "Failed to send event to queue");
-        return false;
+        //return false;
     }
     //ESP_LOGI("state.cpp", "Event added to queue");
-    return true;
+    //return true;
 }
 
 void StateMachine::ProcessEventQueueTask(void* params) {
@@ -40,9 +42,9 @@ void StateMachine::ProcessUpdateSpeedQueueTask(void* params) {
     }
 }
 
-bool StateMachine::AddUpdateSpeedEvent(UpdateSpeedEventData* eventData) {
+bool StateMachine::AddUpdateSpeedEvent(UpdateSpeedEventData eventData) {
     //ESP_LOGI("state.cpp", "Adding update speed event to queue");
-    if(xQueueSend( myUpdateSpeedQueue, eventData, 0 ) != pdPASS) {
+    if(xQueueSend( myUpdateSpeedQueue, &eventData, 0 ) != pdPASS) {
         ESP_LOGE("state.cpp", "Failed to send update speed event to queue");
         return false;
     }
@@ -100,8 +102,7 @@ void StateMachine::UpdateSpeedAction(UpdateSpeedEventData eventData) {
         currentState = State::Stopped;
         //myStepper->UpdateNormalSpeed(0);
     }
-    myStepper->UpdateNormalSpeed(eventData.myNormalSpeed);
-    myStepper->UpdateRapidSpeed(eventData.myRapidSpeed);
+    myStepper->UpdateSpeeds(eventData.myNormalSpeed,eventData.myRapidSpeed);
     //ESP_LOGI("state.cpp", "Done requesting stepper update speeds");
 }
 

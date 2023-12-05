@@ -4,6 +4,9 @@
 
 #include <memory>
 #include "stepper.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
 
 enum class State {
     MovingLeft,
@@ -45,8 +48,8 @@ public:
 class StateMachine {
 public:
     StateMachine(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed);
-    bool AddEvent(Event event);
-    bool AddUpdateSpeedEvent(UpdateSpeedEventData* data);
+    void AddEvent(Event event);
+    bool AddUpdateSpeedEvent(UpdateSpeedEventData data);
 
 private:
     void MoveLeftAction();

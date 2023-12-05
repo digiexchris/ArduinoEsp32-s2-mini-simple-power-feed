@@ -8,8 +8,8 @@
 #include <freertos/FreeRTOS.h>
 #include <soc/adc_channel.h>
 #include <driver/adc.h>
-#include <esp_adc_cal.h>
 #include <freertos/task.h>
+#include <atomic>
 
 class SpeedUpdateHandler {
     public:
@@ -24,11 +24,8 @@ class SpeedUpdateHandler {
         TaskHandle_t updateTaskHandle;
         std::shared_ptr<StateMachine> myStateMachine;
         adc1_channel_t speedPin;
-        uint32_t setSpeedADC = 0;
-        std::mutex setSpeedMutex;
-        uint32_t newSpeedADC = 0;
-        std::mutex newSpeedMutex;
-        uint32_t rapidSpeed = 0;
+        std::atomic<uint32_t> setSpeedADC = 0;
+        std::atomic<uint32_t> rapidSpeed = 0;
         /*******Averaging filter stuff********/
         #define WINDOW_SIZE 8
         uint32_t INDEX = 0;
