@@ -48,7 +48,7 @@ public:
 class StateMachine {
 public:
     StateMachine(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed);
-    bool AddEvent(Event event);
+    void AddEvent(Event event);
     bool AddUpdateSpeedEvent(UpdateSpeedEventData* data);
 
 private:

@@ -1,9 +1,10 @@
 #include "SpeedUpdateHandler.h"
 #include <driver/adc.h>
-#include <esp_adc_cal.h>
 #include <esp_err.h>
 #include <freertos/FreeRTOS.h>
 #include "config.h"
+#include <algorithm>
+#include <esp_log.h>
 
 SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, std::shared_ptr<StateMachine> aStateMachine, uint32_t maxDriverFreq) {
     speedPin = aSpeedPin;
@@ -16,8 +17,8 @@ SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, std::shared_ptr
     ESP_ERROR_CHECK(adc1_config_width(ADC_WIDTH_BIT_12));
     ESP_ERROR_CHECK(adc1_config_channel_atten(speedPin, ADC_ATTEN_DB_11));
 
-    esp_adc_cal_characteristics_t adc1_chars; // Define adc1_chars variable
-    esp_adc_cal_characterize(ADC_UNIT_1 , ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 0, &adc1_chars);
+    // esp_adc_cal_characteristics_t adc1_chars; // Define adc1_chars variable
+    // esp_adc_cal_characterize(ADC_UNIT_1 , ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 0, &adc1_chars);
 
 
     //initialize the averaging filter
@@ -27,7 +28,7 @@ SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, std::shared_ptr
     SUM = 0;
 
     //start the update task
-    xTaskCreatePinnedToCore(&UpdateTask,"update speed", 4048, this, 1, &updateTaskHandle, 0);
+    xTaskCreatePinnedToCore(&UpdateTask,"update speed", 4048, this, 4, &updateTaskHandle, 0);
 }
 
 uint32_t SpeedUpdateHandler::GetNormalSpeed() {
@@ -61,20 +62,21 @@ void SpeedUpdateHandler::UpdateSpeeds() {
         newSpeedADC = SUM / WINDOW_SIZE;
         setSpeedMutex.lock();
         //if the new speed is within a few of the current speed, don't bother updating it
-        if(setSpeedADC != newSpeedADC && newSpeedADC != 0) {
-            if (newSpeedADC >= setSpeedADC + 8 || newSpeedADC <= setSpeedADC - 8) {
+
+        const uint32_t lowBound = setSpeedADC - (MAX_DRIVER_STEPS_PER_SECOND * 0.05);
+        const uint32_t highBound = setSpeedADC + (MAX_DRIVER_STEPS_PER_SECOND * 0.05);
             
-                setSpeedADC = newSpeedADC;
+        if(std::clamp(newSpeedADC, lowBound, highBound) != newSpeedADC) {
+        
+            //todo myState should be a shared pointer instead of global.
+            //or maybe myState should be a singleton?
+            //or just a static global shared pointer?
+            myStateMachine->AddUpdateSpeedEvent(
+            new UpdateSpeedEventData(
+                mapAdcToSpeed(setSpeedADC, 0, 4095, 0, myMaxDriverFreq), 
+                    rapidSpeed)
+            );
             
-                //todo myState should be a shared pointer instead of global.
-                //or maybe myState should be a singleton?
-                //or just a static global shared pointer?
-                myStateMachine->AddUpdateSpeedEvent(
-                new UpdateSpeedEventData(
-                    mapAdcToSpeed(setSpeedADC, 0, 4095, 0, myMaxDriverFreq), 
-                        rapidSpeed)
-                );
-            }
         }
         
         newSpeedMutex.unlock();

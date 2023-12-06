@@ -8,9 +8,9 @@
 #define dirPinStepper 4
 #define enablePinStepper 5
 #define stepPinStepper 6
-#define LEFTPIN 35
-#define RIGHTPIN 38
-#define RAPIDPIN 36
+#define LEFTPIN GPIO_NUM_35
+#define RIGHTPIN GPIO_NUM_38
+#define RAPIDPIN GPIO_NUM_36
 #define ACCELERATION 20000 //steps/s/s
 #define DECELERATION 200000
 
@@ -24,8 +24,8 @@ const int stepsPerRev = 200;
     const uint16_t FULL_SPEED_ACCELERATION_LINEAR_TIME = MAX_DRIVER_STEPS_PER_SECOND / ACCELERATION;
     const uint16_t FULL_SPEED_DECELERATION_LINEAR_TIME = MAX_DRIVER_STEPS_PER_SECOND / ACCELERATION;
 
-    #define ESP_LOGI(tag, format, ...) printf(format, ##__VA_ARGS__)
-    #define ESP_LOGE(tag, format, ...) printf(format, ##__VA_ARGS__)
+    // #define ESP_LOGI(tag, format, ...) printf(format, ##__VA_ARGS__)
+    // #define ESP_LOGE(tag, format, ...) printf(format, ##__VA_ARGS__)
 
 #ifdef USE_DENDO_STEPPER
 

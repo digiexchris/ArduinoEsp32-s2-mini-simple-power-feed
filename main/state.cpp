@@ -1,5 +1,6 @@
 #include "state.h"
 #include "config.h"
+#include <esp_log.h>
 
 StateMachine::StateMachine(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed) : currentState(State::Stopped), currentSpeedState(SpeedState::Normal) {
     myStepper = new Stepper();
@@ -11,14 +12,14 @@ StateMachine::StateMachine(int dirPin, int enablePin, int stepPin, uint16_t rapi
     ESP_LOGI("state.cpp", "Stepper init complete");
 }
 
-bool StateMachine::AddEvent(Event event) {
+void StateMachine::AddEvent(Event event) {
     //ESP_LOGI("state.cpp", "Adding event to queue");
     if(xQueueSend( myEventQueue, &event, 0 ) != pdPASS) {
         ESP_LOGE("state.cpp", "Failed to send event to queue");
-        return false;
+        //return false;
     }
     //ESP_LOGI("state.cpp", "Event added to queue");
-    return true;
+    //return true;
 }
 
 void StateMachine::ProcessEventQueueTask(void* params) {

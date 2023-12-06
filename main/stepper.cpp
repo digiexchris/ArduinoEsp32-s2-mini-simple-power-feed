@@ -10,6 +10,7 @@
 #include "stepper.h"
 #include <mutex>
 #include <algorithm>
+#include <esp_log.h>
 
 Stepper::Stepper() {
     myUseRapidSpeed = false;
@@ -35,7 +36,7 @@ void Stepper::Init(uint8_t dirPin, uint8_t enablePin, uint8_t stepPin, uint16_t 
     myStepper.config(&myStepperCfg);
     myStepper.init();
     //TODO I don't know if it will accept a value of zero
-    myStepper.setSpeed(0, FULL_SPEED_ACCELERATION_LINEAR_TIME, FULL_SPEED_DECELERATION_LINEAR_TIME);
+    //myStepper.setSpeed(0, FULL_SPEED_ACCELERATION_LINEAR_TIME, FULL_SPEED_DECELERATION_LINEAR_TIME);
     #elif USE_FASTACCELSTEPPER
     myEngine.init();
     myStepper = myEngine.stepperConnectToPin(stepPin);
