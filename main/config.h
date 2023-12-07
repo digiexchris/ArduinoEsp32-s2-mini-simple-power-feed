@@ -1,9 +1,10 @@
-
 #ifndef CONFIG_H
 #define CONFIG_H
 
 #include <driver/adc.h>
-#include <soc/adc_channel.h>
+#include <driver/adc_types_legacy.h>
+
+#define DEBUG_ABORTS 1
 
 #define dirPinStepper 4
 #define enablePinStepper 5
@@ -22,7 +23,7 @@ const int stepsPerRev = 200;
 #define USE_DENDO_STEPPER 1
     //(13,000 - 0) / 20,000
     const double FULL_SPEED_ACCELERATION_LINEAR_TIME = 1000*(MAX_DRIVER_STEPS_PER_SECOND / ACCELERATION);
-    const double FULL_SPEED_DECELERATION_LINEAR_TIME = 1000*(MAX_DRIVER_STEPS_PER_SECOND / ACCELERATION);
+    const double FULL_SPEED_DECELERATION_LINEAR_TIME = 1000*(MAX_DRIVER_STEPS_PER_SECOND / DECELERATION);
 
     // #define ESP_LOGI(tag, format, ...) printf(format, ##__VA_ARGS__)
     // #define ESP_LOGE(tag, format, ...) printf(format, ##__VA_ARGS__)

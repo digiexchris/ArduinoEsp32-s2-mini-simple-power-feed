@@ -6,7 +6,12 @@
 #include "stepper.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/queue.h"
+#include "freertos/ringbuf.h"
+#include "shared.h"
+
+#include "esp_event_base.h"
+#include "esp_event.h"
+
 
 enum class State {
     MovingLeft,
@@ -21,6 +26,8 @@ enum class SpeedState {
     Rapid
 };
 
+ESP_EVENT_DECLARE_BASE(STATE_MACHINE_EVENT);
+
 enum class Event {
     LeftPressed,
     LeftReleased,
@@ -28,11 +35,16 @@ enum class Event {
     RightReleased,
     RapidPressed,
     RapidReleased,
-    UpdateSpeed
+    UpdateSpeed,
+	SetStopped
 };
 
-class EventData {
 
+
+class EventData {
+  public:
+		EventData() {};
+		virtual ~EventData() {};
 };
 
 class UpdateSpeedEventData : public EventData {
@@ -43,34 +55,61 @@ public:
             myRapidSpeed(aRapidSpeed) {};
     int16_t myNormalSpeed;
     int16_t myRapidSpeed;
+
+    // Copy constructor
+    UpdateSpeedEventData(const UpdateSpeedEventData& other) 
+        :   myNormalSpeed(other.myNormalSpeed),
+            myRapidSpeed(other.myRapidSpeed) {};
+
+    // Copy assignment operator
+    UpdateSpeedEventData& operator=(const UpdateSpeedEventData& other) {
+        if (this != &other) {
+            myNormalSpeed = other.myNormalSpeed;
+            myRapidSpeed = other.myRapidSpeed;
+        }
+        return *this;
+    }
+
+    // Destructor
+    ~UpdateSpeedEventData() override {}
 };
 
 class StateMachine {
 public:
-    StateMachine(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed);
-    void AddEvent(Event event);
-    bool AddUpdateSpeedEvent(UpdateSpeedEventData data);
+  StateMachine(std::shared_ptr<Stepper> aStepper);
+  void Start();
+
+  State GetState() { return currentState; }
+  //RingbufHandle_t GetEventRingBuf() { return myEventLoop; }
+  esp_event_loop_handle_t GetEventLoop() { return myEventLoop; }
+
+  //RingbufHandle_t GetUpdateSpeedQueue() { return myUpdateSpeedEventLoop; }
 
 private:
     void MoveLeftAction();
     void MoveRightAction();
     void RapidSpeedAction();
     void NormalSpeedAction();
-    void UpdateSpeedAction(UpdateSpeedEventData data);
     void StopLeftAction();
     void StopRightAction();
 
-    static void ProcessEventQueueTask(void* params);
-    static void ProcessUpdateSpeedQueueTask(void* params);
-    void processEvent(Event event);
-    void processSpeedEvent(UpdateSpeedEventData data);
+	static void CheckIfStoppedTask(void* params);
+
+	void CreateStoppingTask();
+
+	static void EventLoopRunnerTask(void *args);
+	static void ProcessEventLoopIteration(void *stateMachine, esp_event_base_t base, int32_t id, void *eventData);
+	//static void ProcessUpdateSpeedQueueTask(void *params);
+    bool ProcessEvent(Event event, EventData* eventData);
 
     State currentState;
     SpeedState currentSpeedState; //TODO probably don't need this, if we can update using debouncer.Changed()
-    Stepper* myStepper;
+	std::shared_ptr<Stepper> myStepper;
     TaskHandle_t myProcessQueueTaskHandle;
-    QueueHandle_t myEventQueue;
-    QueueHandle_t myUpdateSpeedQueue;
+	esp_event_loop_handle_t myEventLoop;
+	TaskHandle_t myEventLoopTaskHandle;
+	StateMachine* myRef;
+	//esp_event_loop_handle_t myUpdateSpeedEventLoop;
 };
 
 #endif // STATE_H

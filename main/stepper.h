@@ -26,8 +26,14 @@ class Stepper {
         void Stop();
         void SetRapidSpeed();
         void SetNormalSpeed();
-        
-        bool IsStopped();
+
+		uint16_t GetCurrentSpeed() {
+			return myStepper.getSpeed();
+		}
+
+		std::string GetState();
+
+		bool IsStopped();
     private:
         
         void UpdateActiveSpeed();

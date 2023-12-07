@@ -82,8 +82,11 @@ void Stepper::UpdateActiveSpeed() {
         // Accelerating
         double speedDifference = targetSpeed - currentSpeed;
         accTime = (speedDifference / MAX_DRIVER_STEPS_PER_SECOND) * FULL_SPEED_ACCELERATION_LINEAR_TIME;
+		
+		//this becomes the stopping speed
+		decTime = (targetSpeed / MAX_DRIVER_STEPS_PER_SECOND) * FULL_SPEED_DECELERATION_LINEAR_TIME;
 
-        myStepper.setSpeed(targetSpeed, accTime, decTime * 1000);
+        myStepper.setSpeed(targetSpeed, accTime, decTime);
     } else {
         // Decelerating
         double speedDifference = currentSpeed - targetSpeed;
@@ -134,13 +137,38 @@ void Stepper::MoveRight() {
 
 void Stepper::Stop() {
     #ifdef USE_DENDO_STEPPER
-    myNormalSpeed = 0;
-    myRapidSpeed = 0;
-    UpdateActiveSpeed();
-    #elif USE_FASTACCELSTEPPER
+//    myNormalSpeed = 0;
+//    myRapidSpeed = 0;
+//    UpdateActiveSpeed();
+	myStepper.stop();
+#elif USE_FASTACCELSTEPPER
     myStepper->stopMove();
     #endif
     ESP_LOGI("Stepper", "Stopping");
+}
+
+std::string Stepper::GetState() {
+	switch (myStepper.getState())
+	{
+		
+		case IDLE:
+			return "IDLE";
+			break;
+		case ACC:
+			return "ACCELERATING";
+			break;
+		case DEC:
+			return "DECELERATING";
+			break;
+		case COAST:
+			return "COASTING";
+			break;
+		case DISABLED:
+			return "DISABLED";
+			break;
+			
+	}
+	return "ERROR";
 }
 
 void Stepper::SetRapidSpeed() {

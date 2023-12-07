@@ -7,7 +7,7 @@
     </CustomSourceDirectories>
     <AutoProgramSPIFFSPartition>true</AutoProgramSPIFFSPartition>
     <ProjectModeSettings>
-      <ProjectGUID>7b6f4c37-5727-48b2-82f5-428e04dc9784</ProjectGUID>
+      <ProjectGUID>0f62d057-f15f-4ae0-b22d-5d635195f6ed</ProjectGUID>
       <GroupSourcesByTypes>true</GroupSourcesByTypes>
       <GroupSourcesByPaths>true</GroupSourcesByPaths>
       <HeaderScanMode>SourceDirs</HeaderScanMode>
@@ -23,17 +23,25 @@
         <Revision>1</Revision>
       </Version>
     </ToolchainID>
-    <RelativeSourceDirectory>.</RelativeSourceDirectory>
+    <RelativeSourceDirectory />
     <ConfigurationType>DEBUG</ConfigurationType>
     <BinaryDirectory>build/$(PlatformName)/$(ConfigurationName)</BinaryDirectory>
     <MakeCommandTemplate>
       <SkipWhenRunningCommandList>false</SkipWhenRunningCommandList>
+      <RemoteHost>
+        <HostName>BuildMachine</HostName>
+        <Transport>BuiltinShortcut</Transport>
+      </RemoteHost>
       <Command>$(ToolchainNinja)</Command>
       <WorkingDirectory>$(BuildDir)</WorkingDirectory>
       <BackgroundMode xsi:nil="true" />
     </MakeCommandTemplate>
     <CMakeCommand>
       <SkipWhenRunningCommandList>false</SkipWhenRunningCommandList>
+      <RemoteHost>
+        <HostName>BuildMachine</HostName>
+        <Transport>BuiltinShortcut</Transport>
+      </RemoteHost>
       <Command>$(SYSPROGS_CMAKE_PATH)</Command>
       <BackgroundMode xsi:nil="true" />
     </CMakeCommand>
@@ -58,8 +66,9 @@
         <BuildAllTargetsInSubdir>false</BuildAllTargetsInSubdir>
         <FoldSingleItemPathLevels>true</FoldSingleItemPathLevels>
       </ProjectItemSettings>
+      <TargetSpecificSettings />
       <SetLDLibraryPathFromDependentArtifacts>true</SetLDLibraryPathFromDependentArtifacts>
-      <ProjectGUID>13492cf4-6881-40d7-9c06-a81571dc659f</ProjectGUID>
+      <ProjectGUID>95afaf9b-c060-4477-8c7a-dbeec86924a0</ProjectGUID>
       <VirtualFolders />
       <ConfigurationNameCase>Upper</ConfigurationNameCase>
       <DefaultHeaderDiscoveryMode>HeaderDirectoryAndSubdirectories</DefaultHeaderDiscoveryMode>
@@ -72,7 +81,7 @@
         </IDFCheckout>
         <COMPort>COM12</COMPort>
         <SuppressTestPrerequisiteChecks>false</SuppressTestPrerequisiteChecks>
-        <UseCCache>false</UseCCache>
+        <UseCCache>true</UseCCache>
         <DeviceID>ESP32S3</DeviceID>
       </ESPIDFExtension>
     </ProjectModeSettings>
@@ -90,82 +99,84 @@
     <DebugStopActions />
     <BreakMode>Default</BreakMode>
   </CustomDebug>
-  <DeviceTerminalSettings>
-    <Connection xsi:type="com.sysprogs.terminal.connection.serial">
-      <ComPortName>COM12</ComPortName>
-      <AdvancedSettings>
-        <BaudRate>115200</BaudRate>
-        <DataBits>8</DataBits>
-        <Parity>None</Parity>
-        <StopBits>One</StopBits>
-        <FlowControl>None</FlowControl>
-      </AdvancedSettings>
-    </Connection>
-    <LastConnectionTime>0</LastConnectionTime>
-    <EchoTypedCharacters>false</EchoTypedCharacters>
-    <ClearContentsWhenReconnecting>false</ClearContentsWhenReconnecting>
-    <ReconnectAutomatically>false</ReconnectAutomatically>
-    <DisplayMode>ASCII</DisplayMode>
-    <Colors>
-      <Background>
-        <Alpha>255</Alpha>
-        <Red>0</Red>
-        <Green>0</Green>
-        <Blue>0</Blue>
-      </Background>
-      <Disconnected>
-        <Alpha>255</Alpha>
-        <Red>169</Red>
-        <Green>169</Green>
-        <Blue>169</Blue>
-      </Disconnected>
-      <Text>
-        <Alpha>255</Alpha>
-        <Red>211</Red>
-        <Green>211</Green>
-        <Blue>211</Blue>
-      </Text>
-      <Echo>
-        <Alpha>255</Alpha>
-        <Red>144</Red>
-        <Green>238</Green>
-        <Blue>144</Blue>
-      </Echo>
-      <Inactive>
-        <Alpha>255</Alpha>
-        <Red>169</Red>
-        <Green>169</Green>
-        <Blue>169</Blue>
-      </Inactive>
-    </Colors>
-    <HexSettings>
-      <MaximumBytesPerLine>16</MaximumBytesPerLine>
-      <ShowTextView>true</ShowTextView>
-      <BreaksAroundEcho>true</BreaksAroundEcho>
-      <AutoSend>true</AutoSend>
-      <SendAsHex>true</SendAsHex>
-      <TimeoutForAutoBreak>0</TimeoutForAutoBreak>
-    </HexSettings>
-    <LineEnding>LF</LineEnding>
-    <TreatLFAsCRLF>false</TreatLFAsCRLF>
-    <KeepOpenAfterExit>false</KeepOpenAfterExit>
-    <ShowAfterProgramming>false</ShowAfterProgramming>
-  </DeviceTerminalSettings>
   <CustomShortcuts>
     <Shortcuts />
     <ShowMessageAfterExecuting>true</ShowMessageAfterExecuting>
   </CustomShortcuts>
   <UserDefinedVariables />
+  <ImportedPropertySheets />
   <CodeSense>
-    <Enabled>Unknown</Enabled>
+    <Enabled>True</Enabled>
     <ExtraSettings>
       <HideErrorsInSystemHeaders>true</HideErrorsInSystemHeaders>
       <SupportLightweightReferenceAnalysis>true</SupportLightweightReferenceAnalysis>
+      <DiscoverySettings>
+        <Mode>Silent</Mode>
+        <SearchInProjectDir>true</SearchInProjectDir>
+        <SearchInSourceDirs>true</SearchInSourceDirs>
+        <SearchInIncludeSubdirs>true</SearchInIncludeSubdirs>
+      </DiscoverySettings>
       <CheckForClangFormatFiles>true</CheckForClangFormatFiles>
       <FormattingEngine xsi:nil="true" />
     </ExtraSettings>
     <CodeAnalyzerSettings>
-      <Enabled>false</Enabled>
+      <Enabled>true</Enabled>
+      <SelectedAnalyzers>
+        <string>apiModeling.Errno</string>
+        <string>apiModeling.google.GTest</string>
+        <string>apiModeling.llvm.CastValue</string>
+        <string>apiModeling.llvm.ReturnValue</string>
+        <string>apiModeling.StdCLibraryFunctions</string>
+        <string>apiModeling.TrustNonnull</string>
+        <string>apiModeling.TrustReturnsNonnull</string>
+        <string>core.builtin.BuiltinFunctions</string>
+        <string>core.builtin.NoReturnFunctions</string>
+        <string>core.CallAndMessage</string>
+        <string>core.CallAndMessageModeling</string>
+        <string>core.DivideZero</string>
+        <string>core.DynamicTypePropagation</string>
+        <string>core.NonnilStringConstants</string>
+        <string>core.NonNullParamChecker</string>
+        <string>core.NullDereference</string>
+        <string>core.StackAddrEscapeBase</string>
+        <string>core.StackAddressEscape</string>
+        <string>core.UndefinedBinaryOperatorResult</string>
+        <string>core.uninitialized.ArraySubscript</string>
+        <string>core.uninitialized.Assign</string>
+        <string>core.uninitialized.Branch</string>
+        <string>core.uninitialized.CapturedBlockVariable</string>
+        <string>core.uninitialized.NewArraySize</string>
+        <string>core.uninitialized.UndefReturn</string>
+        <string>core.VLASize</string>
+        <string>cplusplus.InnerPointer</string>
+        <string>cplusplus.Move</string>
+        <string>cplusplus.NewDelete</string>
+        <string>cplusplus.NewDeleteLeaks</string>
+        <string>cplusplus.PlacementNew</string>
+        <string>cplusplus.PureVirtualCall</string>
+        <string>cplusplus.SelfAssignment</string>
+        <string>cplusplus.SmartPtrModeling</string>
+        <string>cplusplus.StringChecker</string>
+        <string>cplusplus.VirtualCallModeling</string>
+        <string>deadcode.DeadStores</string>
+        <string>nullability.NullPassedToNonnull</string>
+        <string>nullability.NullReturnedFromNonnull</string>
+        <string>security.insecureAPI.getpw</string>
+        <string>security.insecureAPI.gets</string>
+        <string>security.insecureAPI.mkstemp</string>
+        <string>security.insecureAPI.mktemp</string>
+        <string>security.insecureAPI.UncheckedReturn</string>
+        <string>security.insecureAPI.vfork</string>
+        <string>unix.API</string>
+        <string>unix.cstring.BadSizeArg</string>
+        <string>unix.cstring.NullArg</string>
+        <string>unix.Malloc</string>
+        <string>unix.MallocSizeof</string>
+        <string>unix.MismatchedDeallocator</string>
+      </SelectedAnalyzers>
+      <ExtraArguments>
+        <string />
+      </ExtraArguments>
     </CodeAnalyzerSettings>
   </CodeSense>
   <Configurations>
@@ -178,8 +189,13 @@
       <BuildSettingsExtension xsi:type="com.visualgdb.build.external.esp-idf.cmake.extension" />
     </VisualGDBConfiguration>
   </Configurations>
+  <ProgramArgumentsSuggestions />
   <Debug xsi:type="com.visualgdb.debug.embedded">
-    <AdditionalStartupCommands />
+    <AdditionalStartupCommands>
+      <GDBPreStartupCommands />
+      <GDBStartupCommands />
+      <GDBFinalizationCommands />
+    </AdditionalStartupCommands>
     <AdditionalGDBSettings>
       <Features>
         <DisableAutoDetection>false</DisableAutoDetection>
@@ -212,12 +228,12 @@
       <EnableNonStopMode>false</EnableNonStopMode>
       <MaxBreakpointLimit>0</MaxBreakpointLimit>
       <EnableVerboseMode>true</EnableVerboseMode>
-      <EnablePrettyPrinters>false</EnablePrettyPrinters>
+      <EnablePrettyPrinters>true</EnablePrettyPrinters>
     </AdditionalGDBSettings>
     <DebugMethod>
       <ID>openocd</ID>
       <Configuration xsi:type="com.visualgdb.edp.openocd.settings.esp32">
-        <CommandLine>-f interface/esp_usb_jtag.cfg -c "adapter_khz 3000" -f target/esp32s3.cfg</CommandLine>
+        <CommandLine>-f interface/esp_usb_jtag.cfg -c "adapter_khz 20000" -f target/esp32s3.cfg</CommandLine>
         <ExtraParameters>
           <Frequency xsi:nil="true" />
           <BoostedFrequency xsi:nil="true" />
@@ -248,19 +264,41 @@
         <PatchBootloader>true</PatchBootloader>
       </Configuration>
     </DebugMethod>
-    <AutoDetectRTOS>true</AutoDetectRTOS>
-    <SemihostingSupport>Auto</SemihostingSupport>
+    <AutoDetectRTOS>false</AutoDetectRTOS>
+    <SemihostingSupport>Enabled</SemihostingSupport>
     <SemihostingPollingDelay>0</SemihostingPollingDelay>
-    <StepIntoEntryPoint>false</StepIntoEntryPoint>
-    <ReloadFirmwareOnReset>false</ReloadFirmwareOnReset>
+    <StepIntoEntryPoint>true</StepIntoEntryPoint>
+    <ReloadFirmwareOnReset>true</ReloadFirmwareOnReset>
     <ValidateEndOfStackAddress>true</ValidateEndOfStackAddress>
     <StopAtEntryPoint>false</StopAtEntryPoint>
     <EnableVirtualHalts>false</EnableVirtualHalts>
     <DynamicAnalysisSettings />
     <EndOfStackSymbol>_estack</EndOfStackSymbol>
     <TimestampProviderTicksPerSecond>0</TimestampProviderTicksPerSecond>
-    <KeepConsoleAfterExit>false</KeepConsoleAfterExit>
+    <KeepConsoleAfterExit>true</KeepConsoleAfterExit>
     <UnusedStackFillPattern xsi:nil="true" />
+    <SoftwareTracingSettings>
+      <TraceWhileDebugging>false</TraceWhileDebugging>
+      <AutoStart>false</AutoStart>
+      <StaticTracePrograms xsi:type="InsideWorkArea" />
+      <DynamicProgramAreaSize>0</DynamicProgramAreaSize>
+      <SkipInitiallyDisabledTracepoints>false</SkipInitiallyDisabledTracepoints>
+      <TraceProgramOptimization>Size</TraceProgramOptimization>
+      <OutputMode>NonBlocking</OutputMode>
+      <AssumeFramePointerIsValid>true</AssumeFramePointerIsValid>
+      <InstrumentWithNoFeasibleTracepoints>false</InstrumentWithNoFeasibleTracepoints>
+      <MaximumStringLength>255</MaximumStringLength>
+      <DeferVectorTablePatching>true</DeferVectorTablePatching>
+      <ShowAdvancedConfiguration>true</ShowAdvancedConfiguration>
+      <WorkAreaSize>4096</WorkAreaSize>
+    </SoftwareTracingSettings>
+    <RelatedExecutables>
+      <RelatedExecutable>
+        <Program>false</Program>
+        <LoadSymbols>false</LoadSymbols>
+        <ShowInLiveWatch>false</ShowInLiveWatch>
+      </RelatedExecutable>
+    </RelatedExecutables>
     <CheckInterfaceDrivers>true</CheckInterfaceDrivers>
   </Debug>
 </VisualGDBProjectSettings2>

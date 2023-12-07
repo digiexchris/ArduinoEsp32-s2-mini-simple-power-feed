@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<VisualGDBUserPreferences xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <UserDefinedVariableValues />
+  <DebugPreferences xsi:type="com.visualgdb.debug.embedded.preferences">
+    <CatchpointConfiguration>
+      <Exec>false</Exec>
+      <Fork>false</Fork>
+      <Vfork>false</Vfork>
+      <Syscalls />
+      <CXXCatchpoints />
+    </CatchpointConfiguration>
+    <VisualWatches />
+    <VisualWatchPreferences>
+      <DefaultProvider>com.sysprogs.imagewatch</DefaultProvider>
+      <ProviderPreferences>
+        <VisualWatchProviderPreferences>
+          <ProviderID>com.sysprogs.imagewatch</ProviderID>
+          <Preferences>
+            <ViewMode>ZoomedOut</ViewMode>
+            <Defaults />
+            <DefaultPixelFormat>com.sysprogs.imagewatch.encoded</DefaultPixelFormat>
+          </Preferences>
+        </VisualWatchProviderPreferences>
+      </ProviderPreferences>
+    </VisualWatchPreferences>
+    <MaskInterruptsWhileStepping>false</MaskInterruptsWhileStepping>
+    <MemoryWindowPreferences />
+    <c />
+    <a>
+      <a>AllGlobals</a>
+      <b>false</b>
+    </a>
+    <Suggestions />
+    <HardwareRegisters />
+  </DebugPreferences>
+</VisualGDBUserPreferences>
