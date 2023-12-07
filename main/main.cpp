@@ -60,7 +60,7 @@ extern "C" void app_main()
   setup();
 
   while(1) {
-    vTaskDelay(portTICK_RATE_MS * 100);
+    vTaskDelay(portTICK_PERIOD_MS * 100);
     
   }
 

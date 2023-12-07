@@ -1,7 +1,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/portmacro.h"
-#include "driver/gpio.h"
+#include "rom/gpio.h"
 
 #include <memory>
 #include "state.h"
@@ -56,22 +56,23 @@ static void switchDebouncerTask(void* parameter) {
     Debouncer* debouncer = static_cast<Debouncer*>(parameter);
 
     while (true) {
-        bool currentSwitchState = gpio_get_level(debouncer->mySwitchPin);
+
+		bool currentSwitchState = gpio_get_level(debouncer->mySwitchPin);
 
         if (currentSwitchState != debouncer->myLastSwitchState) {
             debouncer->myLastStateChangeTime = xTaskGetTickCount();
             debouncer->myLastSwitchState = currentSwitchState;
-        }
 
-        if ((xTaskGetTickCount() - debouncer->myLastStateChangeTime) >= pdMS_TO_TICKS(debouncer->myDelay)) {
-            // Call the callback if the current state is stable for at least `myDelay` milliseconds
-            if (currentSwitchState == 1) {
-                debouncer->mySwitchPressedCallback();
-            } else {
-                debouncer->mySwitchReleasedCallback();
+            if ((xTaskGetTickCount() - debouncer->myLastStateChangeTime) >= pdMS_TO_TICKS(debouncer->myDelay)) {
+                // Call the callback if the current state is stable for at least `myDelay` milliseconds
+                if (currentSwitchState == 1) {
+                    debouncer->mySwitchPressedCallback();
+                } else {
+                    debouncer->mySwitchReleasedCallback();
+                }
             }
         }
-
+			
         vTaskDelay(pdMS_TO_TICKS(debouncer->myPollIntervalMs));
     }
 }

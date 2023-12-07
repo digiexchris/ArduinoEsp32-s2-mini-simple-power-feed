@@ -5,3 +5,7 @@
 .vscode/ipch
 build/
 wifi.h
+.vs
+.visualgdb
+sdkconfig.old
+heaptrace.gdbinit
