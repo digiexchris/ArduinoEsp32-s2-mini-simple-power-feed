@@ -35,29 +35,34 @@ Debouncer* rapidSwitch;
 void setup() {
   ESP_LOGI("main.cpp", "Setup start");
   myState = std::make_shared<StateMachine>(dirPinStepper, enablePinStepper, stepPinStepper, MAX_DRIVER_STEPS_PER_SECOND);
-  //mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState, MAX_DRIVER_STEPS_PER_SECOND);
+  mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState, MAX_DRIVER_STEPS_PER_SECOND);
   leftSwitch = new Debouncer(myState, LEFTPIN, 50);
   leftSwitch->setSwitchPressedEvent(Event::LeftPressed);
   leftSwitch->setSwitchReleasedEvent(Event::LeftReleased);
-  rightSwitch = new Debouncer(myState, RIGHTPIN, 50);
-  rightSwitch->setSwitchPressedEvent(Event::RightPressed);
-  rightSwitch->setSwitchReleasedEvent(Event::RightReleased);
-  rapidSwitch = new Debouncer(myState, RAPIDPIN, 50);
-  rapidSwitch->setSwitchPressedEvent(Event::RapidPressed);
-  rapidSwitch->setSwitchReleasedEvent(Event::RapidReleased);
-  ESP_LOGI("main.cpp", "Setup complete");
+  // rightSwitch = new Debouncer(myState, RIGHTPIN, 50);
+  // rightSwitch->setSwitchPressedEvent(Event::RightPressed);
+  // rightSwitch->setSwitchReleasedEvent(Event::RightReleased);
+  // rapidSwitch = new Debouncer(myState, RAPIDPIN, 50);
+  // rapidSwitch->setSwitchPressedEvent(Event::RapidPressed);
+  // rapidSwitch->setSwitchReleasedEvent(Event::RapidReleased);
+  // ESP_LOGI("main.cpp", "Setup complete");
 
   leftSwitch->start();
-  rightSwitch->start();
-  rapidSwitch->start();
+  // rightSwitch->start();
+  // rapidSwitch->start();
 }
 
 extern "C" void app_main()
 {
   esp_log_level_set("main.cpp",ESP_LOG_ERROR);
-  esp_log_level_set("state.cpp",ESP_LOG_ERROR);
+  esp_log_level_set("state.cpp",ESP_LOG_INFO);
   esp_log_level_set("stepper.cpp",ESP_LOG_ERROR);
   setup();
+
+  while(1) {
+    vTaskDelay(portTICK_RATE_MS * 100);
+    
+  }
 
   // while(1) {
   //   vTaskDelay(portMAX_DELAY);

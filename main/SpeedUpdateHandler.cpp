@@ -32,12 +32,10 @@ SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, std::shared_ptr
 }
 
 uint32_t SpeedUpdateHandler::GetNormalSpeed() {
-    std::lock_guard<std::mutex> lock(setSpeedMutex);
     return setSpeedADC;
 }
 
 uint32_t SpeedUpdateHandler::GetRapidSpeed() {
-    std::lock_guard<std::mutex> lock(setSpeedMutex);
     return rapidSpeed;
 }
 void SpeedUpdateHandler::UpdateSpeeds() {
@@ -58,29 +56,34 @@ void SpeedUpdateHandler::UpdateSpeeds() {
         SUM = SUM + VALUE;                 // Add the newest reading to the sum
         INDEX = (INDEX+1) % WINDOW_SIZE;   // Increment the index, and wrap to 0 if it exceeds the window size
 
-        newSpeedMutex.lock();
-        newSpeedADC = SUM / WINDOW_SIZE;
-        setSpeedMutex.lock();
+        AVERAGED = SUM / WINDOW_SIZE;
         //if the new speed is within a few of the current speed, don't bother updating it
 
-        const uint32_t lowBound = setSpeedADC - (MAX_DRIVER_STEPS_PER_SECOND * 0.05);
-        const uint32_t highBound = setSpeedADC + (MAX_DRIVER_STEPS_PER_SECOND * 0.05);
+        uint32_t setSpeed = setSpeedADC.load(std::memory_order_relaxed);
+
+        uint32_t lowBound = 0;
+        if(setSpeed > (MAX_DRIVER_STEPS_PER_SECOND * 0.05)) {
+            lowBound = setSpeed - (MAX_DRIVER_STEPS_PER_SECOND * 0.01);
+        }
+
+        uint32_t highBound = MAX_DRIVER_STEPS_PER_SECOND;
+        if(setSpeed < (MAX_DRIVER_STEPS_PER_SECOND - (MAX_DRIVER_STEPS_PER_SECOND * 0.01))) {
+            highBound = setSpeed + (MAX_DRIVER_STEPS_PER_SECOND * 0.05);
+        }
             
-        if(std::clamp(newSpeedADC, lowBound, highBound) != newSpeedADC) {
+        if(std::clamp(AVERAGED, lowBound, highBound) != AVERAGED) {
         
             //todo myState should be a shared pointer instead of global.
             //or maybe myState should be a singleton?
             //or just a static global shared pointer?
+            setSpeedADC.store(AVERAGED, std::memory_order_relaxed);
             myStateMachine->AddUpdateSpeedEvent(
-            new UpdateSpeedEventData(
-                mapAdcToSpeed(setSpeedADC, 0, 4095, 0, myMaxDriverFreq), 
+            UpdateSpeedEventData(
+                mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), 
                     rapidSpeed)
             );
             
         }
-        
-        newSpeedMutex.unlock();
-        setSpeedMutex.unlock();
         
         vTaskDelay(pdMS_TO_TICKS(100));
     }

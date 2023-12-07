@@ -3,6 +3,10 @@
 #include "freertos/portmacro.h"
 #include "driver/gpio.h"
 
+#include <memory>
+#include "state.h"
+#include <esp_log.h>
+
 class Debouncer {
 public:
     Debouncer(std::shared_ptr<StateMachine> stateMachine,  gpio_num_t switchPin, uint16_t aDelay, uint16_t aPollIntervalMs = 50) 
@@ -24,7 +28,7 @@ public:
     }
 
     void start() {
-        xTaskCreate(switchDebouncerTask, "switch_debouncer_task", 2048, this, 10, NULL);
+        xTaskCreate(switchDebouncerTask, "switch_debouncer_task", 2048, this, 1, NULL);
     }
 
 private:
@@ -48,26 +52,29 @@ private:
         myStateMachine->AddEvent(mySwitchReleasedEvent);
     }
 
-    static void switchDebouncerTask(void* parameter) {
-        Debouncer* debouncer = static_cast<Debouncer*>(parameter);
+static void switchDebouncerTask(void* parameter) {
+    Debouncer* debouncer = static_cast<Debouncer*>(parameter);
 
-        while (true) {
-            bool currentSwitchState = gpio_get_level(debouncer->mySwitchPin);
+    while (true) {
+        bool currentSwitchState = gpio_get_level(debouncer->mySwitchPin);
 
-            if (currentSwitchState != debouncer->myLastSwitchState) {
-                debouncer->myLastSwitchState = xTaskGetTickCount();
-            }
-
-            if (currentSwitchState != debouncer->myLastSwitchState && (xTaskGetTickCount() - debouncer->myLastSwitchState) >= pdMS_TO_TICKS(debouncer->myDelay)) {
-                if (currentSwitchState == 0) {
-                    debouncer->mySwitchPressedCallback();
-                } else {
-                    debouncer->mySwitchReleasedCallback();
-                }
-            }
-
+        if (currentSwitchState != debouncer->myLastSwitchState) {
+            debouncer->myLastStateChangeTime = xTaskGetTickCount();
             debouncer->myLastSwitchState = currentSwitchState;
-            vTaskDelay(pdMS_TO_TICKS(debouncer->myPollIntervalMs));
         }
+
+        if ((xTaskGetTickCount() - debouncer->myLastStateChangeTime) >= pdMS_TO_TICKS(debouncer->myDelay)) {
+            // Call the callback if the current state is stable for at least `myDelay` milliseconds
+            if (currentSwitchState == 1) {
+                debouncer->mySwitchPressedCallback();
+            } else {
+                debouncer->mySwitchReleasedCallback();
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(debouncer->myPollIntervalMs));
     }
+}
+
+
 };

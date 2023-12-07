@@ -57,9 +57,8 @@ void Stepper::Init(uint8_t dirPin, uint8_t enablePin, uint8_t stepPin, uint16_t 
 }
 
 bool Stepper::IsStopped() {
-    std::lock_guard<std::mutex> stepperLock(myStepperMutex);
     #ifdef USE_DENDO_STEPPER
-    return(myStepper.getState() == IDLE);
+    return(myStepper.getState() == IDLE || myStepper.getState() == DISABLED);
     #elif USE_FASTACCELSTEPPER
     return (!myStepper->isRunning() && !myStepper->isStopping());
     #endif
@@ -68,26 +67,31 @@ bool Stepper::IsStopped() {
 
 void Stepper::UpdateActiveSpeed() {
     //NOTE do not put a lock_guard here, it will cause a deadlock. Many things call this function.
-    const uint16_t aSpeed = myUseRapidSpeed ? myRapidSpeed : myNormalSpeed;
+    double targetSpeed = myUseRapidSpeed ? myRapidSpeed : myNormalSpeed;
+    double currentSpeed = myStepper.getTargetSpeed();
+
+    if(targetSpeed == currentSpeed) {
+        return;
+    }
 
     #ifdef USE_DENDO_STEPPER
-    const uint16_t curSpeed = myStepper.getTargetSpeed();
-    const uint16_t lowBound = curSpeed - (MAX_DRIVER_STEPS_PER_SECOND * 0.05);
-    const uint16_t highBound = curSpeed + (MAX_DRIVER_STEPS_PER_SECOND * 0.05);
-        
-    if(std::clamp(aSpeed, lowBound, highBound) != aSpeed) {
-        if(curSpeed > aSpeed) {
-            //decelerating
-            const uint16_t accTime = myStepper.getAcc();
-            const uint16_t decTime = FULL_SPEED_DECELERATION_LINEAR_TIME*(aSpeed/MAX_DRIVER_STEPS_PER_SECOND);
-            //#error major error, this needs to be in ms, currently passed in seconds I think
-            myStepper.setSpeed(aSpeed, accTime, decTime);
-        } else {
-            //accelerating
-            const uint16_t accTime = FULL_SPEED_ACCELERATION_LINEAR_TIME*(aSpeed/MAX_DRIVER_STEPS_PER_SECOND);
-            const uint16_t decTime = myStepper.getDec();
-            myStepper.setSpeed(aSpeed, accTime, decTime);
-        }
+    double accTime = myStepper.getAcc();
+    double decTime = myStepper.getDec();
+
+    if (targetSpeed > currentSpeed) {
+        // Accelerating
+        double speedDifference = targetSpeed - currentSpeed;
+        accTime = (speedDifference / MAX_DRIVER_STEPS_PER_SECOND) * FULL_SPEED_ACCELERATION_LINEAR_TIME;
+
+        myStepper.setSpeed(targetSpeed, accTime, decTime * 1000);
+    } else {
+        // Decelerating
+        double speedDifference = currentSpeed - targetSpeed;
+        decTime = (speedDifference / MAX_DRIVER_STEPS_PER_SECOND) * FULL_SPEED_DECELERATION_LINEAR_TIME;
+
+        myStepper.setSpeed(targetSpeed, accTime, decTime);
+    }
+
  #elif USE_FASTACCELSTEPPER   
     const uint16_t curSpeed = myStepper->getSpeedInMilliHz()/1000;
     const bool isRunning = myStepper->isRunning();
@@ -96,25 +100,15 @@ void Stepper::UpdateActiveSpeed() {
         ESP_ERROR_CHECK(myStepper->setSpeedInHz(aSpeed));
         myStepper->applySpeedAcceleration();
         #endif
-    } else {
-        ESP_LOGI("Stepper", "Speed is close enough to current speed, ignore");
-    }
 }
 
-void Stepper::UpdateNormalSpeed(int16_t aSpeed) {
-    std::lock_guard<std::mutex> stepperLock(myStepperMutex);
-    myNormalSpeed = aSpeed;
-    UpdateActiveSpeed();
-}
-
-void Stepper::UpdateRapidSpeed(int16_t aSpeed) {
-    std::lock_guard<std::mutex> stepperLock(myStepperMutex);
-    myRapidSpeed = aSpeed;
+void Stepper::UpdateSpeeds(uint16_t aNormalSpeed, uint16_t aRapidSpeed) {
+    myNormalSpeed = aNormalSpeed;
+    myRapidSpeed = aRapidSpeed;
     UpdateActiveSpeed();
 }
 
 void Stepper::MoveLeft() {
-    std::lock_guard<std::mutex> stepperLock(myStepperMutex);
     #ifdef USE_DENDO_STEPPER
     UpdateActiveSpeed();
     myStepper.runInf(static_cast<bool>(StepperDirection::Left));
@@ -127,7 +121,6 @@ void Stepper::MoveLeft() {
 }
 
 void Stepper::MoveRight() {
-    std::lock_guard<std::mutex> stepperLock(myStepperMutex);
     #ifdef USE_DENDO_STEPPER
     UpdateActiveSpeed();
     myStepper.runInf(static_cast<bool>(StepperDirection::Right));
@@ -140,7 +133,6 @@ void Stepper::MoveRight() {
 }
 
 void Stepper::Stop() {
-    std::lock_guard<std::mutex> stepperLock(myStepperMutex);
     #ifdef USE_DENDO_STEPPER
     myNormalSpeed = 0;
     myRapidSpeed = 0;
@@ -152,14 +144,12 @@ void Stepper::Stop() {
 }
 
 void Stepper::SetRapidSpeed() {
-    std::lock_guard<std::mutex> stepperLock(myStepperMutex);
     myUseRapidSpeed = true;
     UpdateActiveSpeed();
     ESP_LOGI("Stepper", "Rapid speed");
 }
 
 void Stepper::SetNormalSpeed() {
-    std::lock_guard<std::mutex> stepperLock(myStepperMutex);
     myUseRapidSpeed = false;
     UpdateActiveSpeed();
     ESP_LOGI("Stepper", "Normal speed");

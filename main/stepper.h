@@ -1,5 +1,6 @@
 #ifndef STEPPER_H
 #define STEPPER_H
+#include "config.h"
 
 #ifdef USE_DENDO_STEPPER
 #include "DendoStepper.h"
@@ -19,8 +20,7 @@ class Stepper {
     //TODO implement mutexes in all of these!!!
         Stepper();
         void Init(uint8_t dirPin, uint8_t enablePin, uint8_t stepPin, uint16_t rapidSpeed);
-        void UpdateNormalSpeed(int16_t speed);
-        void UpdateRapidSpeed(int16_t speed);
+        void UpdateSpeeds(uint16_t aNormalSpeed, uint16_t aRapidSpeed);
         void MoveLeft();
         void MoveRight();
         void Stop();
@@ -43,8 +43,6 @@ class Stepper {
         
         uint16_t myRapidSpeed;
         uint16_t myNormalSpeed;
-        
-        std::mutex myStepperMutex;
 };
 
 #endif // STEPPER_H
