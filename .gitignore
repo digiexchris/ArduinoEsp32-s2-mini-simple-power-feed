@@ -6,6 +6,7 @@
 build/
 wifi.h
 .vs
-.visualgdb
+.visualgdb/
 sdkconfig.old
 heaptrace.gdbinit
+.visualgdb/CodeDB
