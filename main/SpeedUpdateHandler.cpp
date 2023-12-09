@@ -79,15 +79,24 @@ void SpeedUpdateHandler::UpdateSpeeds() {
             
         if(std::clamp(AVERAGED, lowBound, highBound) != AVERAGED) {
         
-            //todo myState should be a shared pointer instead of global.
-            //or maybe myState should be a singleton?
-            //or just a static global shared pointer?
             setSpeedADC.store(AVERAGED, std::memory_order_relaxed);
 
-			UBaseType_t res = xRingbufferSend(mySpeedEventRingBuf, (void *)new UpdateSpeedEventData(mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), rapidSpeed), sizeof(UpdateSpeedEventData), pdMS_TO_TICKS(100));
-			if (res != pdTRUE)
+//			UBaseType_t res = xRingbufferSend(mySpeedEventRingBuf, (void *)new UpdateSpeedEventData(mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), rapidSpeed), sizeof(UpdateSpeedEventData), pdMS_TO_TICKS(100));
+//			if (res != pdTRUE)
+//			{
+//				ESP_LOGE("SpeedUpdateHandler.cpp", "Failed to send update speed event to queue");
+//			}
+			auto eventData = std::make_unique<UpdateSpeedEventData>(mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), rapidSpeed);
+			UBaseType_t res = xRingbufferSend(mySpeedEventRingBuf, static_cast<void *>(eventData.get()), sizeof(UpdateSpeedEventData), pdMS_TO_TICKS(100));
+			if (res == pdTRUE)
+			{
+				// Transfer ownership to the ring buffer
+				eventData.release();
+			}
+			else
 			{
 				ESP_LOGE("SpeedUpdateHandler.cpp", "Failed to send update speed event to queue");
+				// eventData will be automatically deleted here if not sent
 			}
         }
         

@@ -27,9 +27,9 @@
 
 //TODO add stop positions to oled display
 
-Switch* leftSwitch;
-Switch* rightSwitch;
-Switch* rapidSwitch;
+std::shared_ptr<Switch> leftSwitch;
+std::shared_ptr<Switch> rightSwitch;
+std::shared_ptr<Switch> rapidSwitch;
 
 void setup() {
 	gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1 | ESP_INTR_FLAG_EDGE | ESP_INTR_FLAG_IRAM);
@@ -40,35 +40,21 @@ void setup() {
 	myState = std::make_shared<StateMachine>(myStepper);
 	mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState->GetUpdateSpeedQueue(), MAX_DRIVER_STEPS_PER_SECOND);
 	Debouncer::Create(myState->GetEventRingBuf());
-	leftSwitch = new Switch(LEFTPIN, 50, Event::LeftPressed, Event::LeftReleased);
-	rightSwitch = new Switch(RIGHTPIN, 50, Event::RightPressed, Event::RightReleased);
-	rapidSwitch = new Switch(RAPIDPIN, 50, Event::RapidPressed, Event::RapidReleased);
+	leftSwitch = std::make_shared<Switch>(LEFTPIN, 50, Event::LeftPressed, Event::LeftReleased);
+	rightSwitch = std::make_shared<Switch>(RIGHTPIN, 50, Event::RightPressed, Event::RightReleased);
+	rapidSwitch = std::make_shared<Switch>(RAPIDPIN, 50, Event::RapidPressed, Event::RapidReleased);
 
-	//Debouncer::AddSwitch(SwitchName::LEFT, leftSwitch);
+	Debouncer::AddSwitch(SwitchName::LEFT, leftSwitch);
 	Debouncer::AddSwitch(SwitchName::RIGHT, rightSwitch);
 	Debouncer::AddSwitch(SwitchName::RAPID, rapidSwitch);
 	
-	//	leftSwitch = new Debouncer(myState->GetEventRingBuf());
-	//	leftSwitch->setSwitchPressedEvent(Event::LeftPressed);
-	//	leftSwitch->setSwitchReleasedEvent(Event::LeftReleased);
-	//
-	//	rightSwitch = new Debouncer(myState->GetEventRingBuf(), RIGHTPIN, 50);
-	//	rightSwitch->setSwitchPressedEvent(Event::RightPressed);
-	//	rightSwitch->setSwitchReleasedEvent(Event::RightReleased);
-	//
-	//	rapidSwitch = new Debouncer(myState->GetEventRingBuf(), RAPIDPIN, 50);
-	//	rapidSwitch->setSwitchPressedEvent(Event::RapidPressed);
-	//	rapidSwitch->setSwitchReleasedEvent(Event::RapidReleased);
   
-	// ESP_LOGI("main.cpp", "Setup complete");
+	ESP_LOGI("main.cpp", "Setup complete");
   
 	//Start state FIRST or the queues will fill and hang
 	myState->Start();
 	mySpeedUpdateHandler->Start();
 	Debouncer::Start();
-//	leftSwitch->start();
-//	rightSwitch->start();
-//	rapidSwitch->start();
   
 	ESP_LOGI("main.cpp", "tasks started");
 }

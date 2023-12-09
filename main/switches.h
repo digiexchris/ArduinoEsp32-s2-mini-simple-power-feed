@@ -39,14 +39,14 @@ class Debouncer
   public:
 	static void Create(RingbufHandle_t stateRingBuf);
 
-	static void AddSwitch(SwitchName aName, Switch *aSwitch);
+	static void AddSwitch(SwitchName aName, std::shared_ptr<Switch> aSwitch);
 
 	static void Start();
 
   private:
     static RingbufHandle_t myStateRingBuf;
-	
-	static std::vector<Switch*> mySwitches;
+
+	static std::vector<std::shared_ptr<Switch>> mySwitches;
 
 	static void IRAM_ATTR DebounceHandler(void *arg);
 };

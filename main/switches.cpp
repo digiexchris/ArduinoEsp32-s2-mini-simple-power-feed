@@ -23,7 +23,7 @@ void Debouncer::Create(RingbufHandle_t stateRingBuf)
 	myStateRingBuf = stateRingBuf;
 }
 
-void Debouncer::AddSwitch(SwitchName aName, Switch *aSwitch)
+void Debouncer::AddSwitch(SwitchName aName, std::shared_ptr<Switch>aSwitch)
 {
 	mySwitches.push_back(aSwitch);
 	gpio_pad_select_gpio(aSwitch->mySwitchPin);
@@ -35,25 +35,25 @@ void Debouncer::AddSwitch(SwitchName aName, Switch *aSwitch)
 
 void Debouncer::Start()
 {
-	for (Switch *aSwitch : mySwitches)
+	for (std::shared_ptr<Switch> aSwitch : mySwitches)
 	{
-		gpio_isr_handler_add(aSwitch->mySwitchPin, DebounceHandler, aSwitch);
+		gpio_isr_handler_add(aSwitch->mySwitchPin, DebounceHandler, aSwitch.get());
 	}
 }
 
 void IRAM_ATTR Debouncer::DebounceHandler(void *arg)
 {
 	Switch *aSwitch = static_cast<Switch *>(arg);
-//	TickType_t now = xTaskGetTickCountFromISR();
+	TickType_t now = xTaskGetTickCountFromISR();
 
 	bool currentSwitchState = gpio_get_level(aSwitch->mySwitchPin);
 	if (currentSwitchState != aSwitch->myLastSwitchState)
 	{
-		//aSwitch->myLastStateChangeTime = now;
+		aSwitch->myLastStateChangeTime = now;
 		aSwitch->myLastSwitchState = currentSwitchState;
 		aSwitch->callbackCalled = false;
 	}
-	if (!aSwitch->callbackCalled) //&& (xTaskGetTickCount() - aSwitch->myLastStateChangeTime) >= pdMS_TO_TICKS(aSwitch->myDelay))
+	if (!aSwitch->callbackCalled) && (xTaskGetTickCount() - aSwitch->myLastStateChangeTime) >= pdMS_TO_TICKS(aSwitch->myDelay))
 	{
 		// Call the callback if the current state is stable for at least `myDelay` milliseconds
 		if (currentSwitchState == 1)
