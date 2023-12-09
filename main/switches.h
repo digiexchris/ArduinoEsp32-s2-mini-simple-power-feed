@@ -32,6 +32,7 @@ struct Switch
 	gpio_mode_t myMode;
 	bool callbackCalled;
 	bool myLastSwitchState;
+	bool myHasPendingStateChange;
 };
 
 class Debouncer
@@ -45,9 +46,10 @@ class Debouncer
 
   private:
     static RingbufHandle_t myStateRingBuf;
-
+	
 	static std::vector<std::shared_ptr<Switch>> mySwitches;
 
 	static void IRAM_ATTR DebounceHandler(void *arg);
+	static void IRAM_ATTR DebounceTask(void *arg);
 };
 

@@ -2,7 +2,7 @@
 #include "shared.h"
 
 RingbufHandle_t Debouncer::myStateRingBuf;
-std::vector<Switch *> Debouncer::mySwitches;
+std::vector<std::shared_ptr<Switch>> Debouncer::mySwitches;
 
 Switch::Switch(gpio_num_t aSwitchPin, uint16_t aDelay, Event aPressedEvent, Event aReleasedEvent)
 {
@@ -16,6 +16,7 @@ Switch::Switch(gpio_num_t aSwitchPin, uint16_t aDelay, Event aPressedEvent, Even
 	myMode = GPIO_MODE_INPUT;
 	callbackCalled = true;
 	myLastSwitchState = false;
+	myHasPendingStateChange = false;
 }
 
 void Debouncer::Create(RingbufHandle_t stateRingBuf)
@@ -44,26 +45,26 @@ void Debouncer::Start()
 void IRAM_ATTR Debouncer::DebounceHandler(void *arg)
 {
 	Switch *aSwitch = static_cast<Switch *>(arg);
-	TickType_t now = xTaskGetTickCountFromISR();
+	aSwitch->myLastStateChangeTime = xTaskGetTickCountFromISR();
+	aSwitch->myHasPendingStateChange = true;
+}
 
-	bool currentSwitchState = gpio_get_level(aSwitch->mySwitchPin);
-	if (currentSwitchState != aSwitch->myLastSwitchState)
+void Debouncer::DebounceTask(void *arg)
+{
+	while (true)
 	{
-		aSwitch->myLastStateChangeTime = now;
-		aSwitch->myLastSwitchState = currentSwitchState;
-		aSwitch->callbackCalled = false;
-	}
-	if (!aSwitch->callbackCalled) && (xTaskGetTickCount() - aSwitch->myLastStateChangeTime) >= pdMS_TO_TICKS(aSwitch->myDelay))
-	{
-		// Call the callback if the current state is stable for at least `myDelay` milliseconds
-		if (currentSwitchState == 1)
+		for (auto &aSwitch : Debouncer::mySwitches)
 		{
-			xRingbufferSendFromISR(myStateRingBuf, &aSwitch->mySwitchPressedEvent, sizeof(aSwitch->mySwitchPressedEvent), nullptr);
+			if (aSwitch->myHasPendingStateChange &&
+				(xTaskGetTickCount() - aSwitch->myLastStateChangeTime) >= pdMS_TO_TICKS(aSwitch->myDelay))
+			{
+				// Process the stable state change
+				bool currentSwitchState = gpio_get_level(aSwitch->mySwitchPin);
+				Event event = currentSwitchState ? aSwitch->mySwitchPressedEvent : aSwitch->mySwitchReleasedEvent;
+				xRingbufferSend(Debouncer::myStateRingBuf, &event, sizeof(event), portMAX_DELAY);
+				aSwitch->myHasPendingStateChange = false;
+			}
 		}
-		else
-		{
-			xRingbufferSendFromISR(myStateRingBuf, &aSwitch->mySwitchReleasedEvent, sizeof(aSwitch->mySwitchPressedEvent), nullptr);
-		}
-		aSwitch->callbackCalled = true;
+		vTaskDelay(pdMS_TO_TICKS(50)); // Check every 10 ms, adjust as needed
 	}
 }
