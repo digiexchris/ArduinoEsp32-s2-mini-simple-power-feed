@@ -45,8 +45,8 @@ void StateMachine::ProcessEventQueueTask(void* params) {
 		if (item_size)
 		{
 			if (!sm->ProcessEvent(*event))
-			{
-				xRingbufferSend(ringBuf, (void *)new Event(*event), sizeof(event), pdMS_TO_TICKS(50));
+			{//need to implement //the stopped state detector. Also this requeue doesn't work. also maybe ignore the reverse instead of requeue? make them center the handle and retry.
+				//xRingbufferSend(ringBuf, (void *)new Event(*event), sizeof(event), pdMS_TO_TICKS(50));
 			}
 
 			vRingbufferReturnItem(ringBuf, (void *)event);

@@ -40,11 +40,11 @@ void setup() {
 	myState = std::make_shared<StateMachine>(myStepper);
 	mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState->GetUpdateSpeedQueue(), MAX_DRIVER_STEPS_PER_SECOND);
 	Debouncer::Create(myState->GetEventRingBuf());
-	leftSwitch = new Switch(LEFTPIN, 50, Event::LeftPressed, Event::RightPressed);
-	rightSwitch = new Switch(RIGHTPIN, 50, Event::RightPressed, Event::LeftPressed);
+	leftSwitch = new Switch(LEFTPIN, 50, Event::LeftPressed, Event::LeftReleased);
+	rightSwitch = new Switch(RIGHTPIN, 50, Event::RightPressed, Event::RightReleased);
 	rapidSwitch = new Switch(RAPIDPIN, 50, Event::RapidPressed, Event::RapidReleased);
 
-	Debouncer::AddSwitch(SwitchName::LEFT, leftSwitch);
+	//Debouncer::AddSwitch(SwitchName::LEFT, leftSwitch);
 	Debouncer::AddSwitch(SwitchName::RIGHT, rightSwitch);
 	Debouncer::AddSwitch(SwitchName::RAPID, rapidSwitch);
 	
@@ -92,6 +92,11 @@ const char *stateToString(State aState)
   }
 }
 
+#include "esp_heap_caps.h"
+#include "esp_heap_trace.h"
+#define NUM_RECORDS 100
+static heap_trace_record_t trace_record[NUM_RECORDS]; // This buffer must be in internal RAM
+
 extern "C" void app_main()
 {
   esp_log_level_set("main.cpp",ESP_LOG_ERROR);
@@ -99,13 +104,21 @@ extern "C" void app_main()
   esp_log_level_set("stepper.cpp",ESP_LOG_ERROR);
   esp_log_level_set("esp32s3.cpu1", ESP_LOG_INFO);
   setup();
-//
+
+  heap_trace_init_standalone(trace_record, NUM_RECORDS);
+
+  //
   while(1) {
-    vTaskDelay(portTICK_PERIOD_MS * 1000);
+    
+	heap_trace_start(HEAP_TRACE_LEAKS);
 	const char * state = stateToString(myState->GetState());
     ESP_LOGI("Current State", "%s", state);
 	ESP_LOGI("Stepper State", "%s", myStepper->GetState().c_str());
 	ESP_LOGI("Current Speed", "%d", myStepper->GetCurrentSpeed());
+	
+	vTaskDelay(portTICK_PERIOD_MS * 1000);
+	heap_trace_stop();
+	heap_trace_dump();
   }
 
   // while(1) {
