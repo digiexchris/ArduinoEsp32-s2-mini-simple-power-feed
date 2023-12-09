@@ -9,9 +9,10 @@
 #include "state.h"
 #include <esp_log.h>
 #include "config.h"
+#include "shared.h"
 #include <soc/adc_channel.h>
 #include "SpeedUpdateHandler.h"
-#include "debounce.h"
+#include "switches.h"
 
 // #define dirPinStepper 4
 // #define enablePinStepper 5
@@ -26,14 +27,9 @@
 
 //TODO add stop positions to oled display
 
-static std::shared_ptr<SpeedUpdateHandler> mySpeedUpdateHandler;
-static std::shared_ptr<StateMachine> myState;
-
-static std::shared_ptr<Stepper> myStepper;
-
-Debouncer* leftSwitch;
-Debouncer* rightSwitch;
-Debouncer* rapidSwitch;
+Switch* leftSwitch;
+Switch* rightSwitch;
+Switch* rapidSwitch;
 
 void setup() {
 	ESP_LOGI("main.cpp", "Setup start");
@@ -41,25 +37,35 @@ void setup() {
 	myStepper->Init(dirPinStepper, enablePinStepper, stepPinStepper, MAX_DRIVER_STEPS_PER_SECOND);
 	myState = std::make_shared<StateMachine>(myStepper);
 	mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState->GetUpdateSpeedQueue(), MAX_DRIVER_STEPS_PER_SECOND);
-	leftSwitch = new Debouncer(myState->GetEventRingBuf(), LEFTPIN, 50);
-	leftSwitch->setSwitchPressedEvent(Event::LeftPressed);
-	leftSwitch->setSwitchReleasedEvent(Event::LeftReleased);
+	Debouncer::Create(myState->GetEventRingBuf());
+	leftSwitch = new Switch(LEFTPIN, 50, Event::LeftPressed, Event::RightPressed);
+	rightSwitch = new Switch(RIGHTPIN, 50, Event::RightPressed, Event::LeftPressed);
+	rapidSwitch = new Switch(RAPIDPIN, 50, Event::RapidPressed, Event::RapidReleased);
 
-	rightSwitch = new Debouncer(myState->GetEventRingBuf(), RIGHTPIN, 50);
-	rightSwitch->setSwitchPressedEvent(Event::RightPressed);
-	rightSwitch->setSwitchReleasedEvent(Event::RightReleased);
-
-	rapidSwitch = new Debouncer(myState->GetEventRingBuf(), RAPIDPIN, 50);
-	rapidSwitch->setSwitchPressedEvent(Event::RapidPressed);
-	rapidSwitch->setSwitchReleasedEvent(Event::RapidReleased);
+	Debouncer::AddSwitch(SwitchName::LEFT, leftSwitch);
+	Debouncer::AddSwitch(SwitchName::RIGHT, rightSwitch);
+	Debouncer::AddSwitch(SwitchName::RAPID, rapidSwitch);
+	
+	//	leftSwitch = new Debouncer(myState->GetEventRingBuf());
+	//	leftSwitch->setSwitchPressedEvent(Event::LeftPressed);
+	//	leftSwitch->setSwitchReleasedEvent(Event::LeftReleased);
+	//
+	//	rightSwitch = new Debouncer(myState->GetEventRingBuf(), RIGHTPIN, 50);
+	//	rightSwitch->setSwitchPressedEvent(Event::RightPressed);
+	//	rightSwitch->setSwitchReleasedEvent(Event::RightReleased);
+	//
+	//	rapidSwitch = new Debouncer(myState->GetEventRingBuf(), RAPIDPIN, 50);
+	//	rapidSwitch->setSwitchPressedEvent(Event::RapidPressed);
+	//	rapidSwitch->setSwitchReleasedEvent(Event::RapidReleased);
   
 	// ESP_LOGI("main.cpp", "Setup complete");
   
 	//Start state FIRST or the queues will fill and hang
 	myState->Start();
 	mySpeedUpdateHandler->Start();
-	leftSwitch->start();
-	rightSwitch->start();
+	Debouncer::Start();
+//	leftSwitch->start();
+//	rightSwitch->start();
 //	rapidSwitch->start();
   
 	ESP_LOGI("main.cpp", "tasks started");

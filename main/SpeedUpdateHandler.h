@@ -3,14 +3,13 @@
 #define SPEEDUPDATEHANDLER_H
 
 #include <mutex>
-#include "state.h"
 #include <memory>
 #include <freertos/FreeRTOS.h>
 #include <soc/adc_channel.h>
 #include <driver/adc.h>
 #include <freertos/task.h>
 #include <atomic>
-
+#include "state.h"
 class SpeedUpdateHandler {
     public:
 	    SpeedUpdateHandler(adc1_channel_t speedPin, RingbufHandle_t aRingBuf, uint32_t maxDriverFreq);
