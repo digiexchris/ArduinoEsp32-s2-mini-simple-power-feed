@@ -73,8 +73,8 @@ void SpeedUpdateHandler::UpdateSpeeds() {
         }
 
         uint32_t highBound = MAX_DRIVER_STEPS_PER_SECOND;
-        if(setSpeed < (MAX_DRIVER_STEPS_PER_SECOND - (MAX_DRIVER_STEPS_PER_SECOND * 0.01))) {
-            highBound = setSpeed + (MAX_DRIVER_STEPS_PER_SECOND * 0.05);
+        if(setSpeed < (MAX_DRIVER_STEPS_PER_SECOND - (MAX_DRIVER_STEPS_PER_SECOND * 0.001))) {
+            highBound = setSpeed + (MAX_DRIVER_STEPS_PER_SECOND * 0.001);
         }
             
         if(std::clamp(AVERAGED, lowBound, highBound) != AVERAGED) {

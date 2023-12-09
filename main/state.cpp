@@ -42,7 +42,7 @@ void StateMachine::ProcessEventQueueTask(void* params) {
 		Event *event = (Event *)xRingbufferReceive(ringBuf, &item_size, portMAX_DELAY);
 
 		// Check received item
-		if (!item_size)
+		if (item_size)
 		{
 			if (!sm->ProcessEvent(*event))
 			{
@@ -71,7 +71,7 @@ void StateMachine::ProcessUpdateSpeedQueueTask(void* params) {
     while(true) {
         size_t item_size;
 		UpdateSpeedEventData *eventData = (UpdateSpeedEventData *)xRingbufferReceive(ringBuf, &item_size, portMAX_DELAY);
-		if (!item_size)
+		if (item_size)
 		{
 			// ignore speed changes while stopping
 			if (sm->GetState() == State::StoppingLeft || sm->GetState() == State::StoppingRight)

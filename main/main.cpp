@@ -32,6 +32,8 @@ Switch* rightSwitch;
 Switch* rapidSwitch;
 
 void setup() {
+	gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1 | ESP_INTR_FLAG_EDGE | ESP_INTR_FLAG_IRAM);
+	
 	ESP_LOGI("main.cpp", "Setup start");
 	myStepper = std::make_shared<Stepper>();
 	myStepper->Init(dirPinStepper, enablePinStepper, stepPinStepper, MAX_DRIVER_STEPS_PER_SECOND);
