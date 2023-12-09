@@ -4,13 +4,15 @@
 #include <freertos/FreeRTOS.h>
 #include "config.h"
 #include <algorithm>
+#include "state.h"
 #include <esp_log.h>
+#include <freertos/ringbuf.h>
 
-SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, std::shared_ptr<StateMachine> aStateMachine, uint32_t maxDriverFreq) {
+SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, RingbufHandle_t aRingBuf, uint32_t maxDriverFreq) {
     speedPin = aSpeedPin;
     myMaxDriverFreq = maxDriverFreq;
     rapidSpeed = maxDriverFreq;
-    myStateMachine = aStateMachine;
+	mySpeedEventRingBuf = aRingBuf;
 
     //pinMode(speedPin, INPUT);
 
@@ -28,7 +30,11 @@ SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, std::shared_ptr
     SUM = 0;
 
     //start the update task
-    xTaskCreatePinnedToCore(&UpdateTask,"update speed", 4048, this, 4, &updateTaskHandle, 0);
+}
+
+void SpeedUpdateHandler::Start() {
+	//start the update task
+	xTaskCreatePinnedToCore(&UpdateTask,"update speed", 4048, this, 4, &updateTaskHandle, 0);
 }
 
 uint32_t SpeedUpdateHandler::GetNormalSpeed() {
@@ -77,12 +83,12 @@ void SpeedUpdateHandler::UpdateSpeeds() {
             //or maybe myState should be a singleton?
             //or just a static global shared pointer?
             setSpeedADC.store(AVERAGED, std::memory_order_relaxed);
-            myStateMachine->AddUpdateSpeedEvent(
-            UpdateSpeedEventData(
-                mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), 
-                    rapidSpeed)
-            );
-            
+
+			UBaseType_t res = xRingbufferSend(mySpeedEventRingBuf, (void *)new UpdateSpeedEventData(mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), rapidSpeed), sizeof(UpdateSpeedEventData), pdMS_TO_TICKS(100));
+			if (res != pdTRUE)
+			{
+				ESP_LOGE("SpeedUpdateHandler.cpp", "Failed to send update speed event to queue");
+			}
         }
         
         vTaskDelay(pdMS_TO_TICKS(100));

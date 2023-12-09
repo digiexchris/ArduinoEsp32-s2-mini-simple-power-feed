@@ -1,55 +1,92 @@
 #include "state.h"
 #include "config.h"
 #include <esp_log.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/ringbuf.h>
 
-StateMachine::StateMachine(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed) : currentState(State::Stopped), currentSpeedState(SpeedState::Normal) {
-    myStepper = new Stepper();
-    myStepper->Init(dirPin, enablePin, stepPin, rapidSpeed);
-    myEventQueue = xQueueCreate( 10, sizeof( Event ) );
-    //xTaskCreate(&StateMachine::ProcessEventQueueTask, "ProcessEventQueueTask", 2048*16, this, 5, NULL);
-    myUpdateSpeedQueue = xQueueCreate( 10, sizeof( UpdateSpeedEventData ) );
-    xTaskCreate(&StateMachine::ProcessUpdateSpeedQueueTask, "ProcessUpdateSpeedQueueTask", 2048*8, this, 5, NULL);
-    ESP_LOGI("state.cpp", "Stepper init complete");
-}
+StateMachine::StateMachine(std::shared_ptr<Stepper> aStepper) : currentState(State::Stopped), currentSpeedState(SpeedState::Normal) {
+    myStepper = aStepper;
+	myEventRingBuf = xRingbufferCreate(1024, RINGBUF_TYPE_NOSPLIT);
+	if (!myEventRingBuf)
+	{
+		ESP_LOGE("state.cpp", "Failed to create event queue");
+	}
 
-void StateMachine::AddEvent(Event event) {
-    //ESP_LOGI("state.cpp", "Adding event to queue");
-    if(xQueueSend( myEventQueue, &event, 0 ) != pdPASS) {
-        ESP_LOGE("state.cpp", "Failed to send event to queue");
-        //return false;
-    }
-    //ESP_LOGI("state.cpp", "Event added to queue");
-    //return true;
+	myUpdateSpeedRingbuf = xRingbufferCreate(1024, RINGBUF_TYPE_NOSPLIT);;
+	if (!myUpdateSpeedRingbuf)
+	{
+		ESP_LOGE("state.cpp", "Failed to create update speed queue");
+	}
+//	myUpdateSpeedQueue->
+	
+    ESP_LOGI("state.cpp", "State Machine init complete");
 }
 
 void StateMachine::ProcessEventQueueTask(void* params) {
-    StateMachine* stateMachine = static_cast<StateMachine*>(params);
-    while(true) {
-        
-        Event event;
-        xQueueReceive(stateMachine->myEventQueue, &event, portMAX_DELAY);
-        stateMachine->processEvent(event);
+    StateMachine* sm = static_cast<StateMachine*>(params);
+	if (!sm)
+	{
+		ESP_LOGE("state.cpp", "Failed to cast params to StateMachine while starting ProcessUpdateSpeedQueueTask");
+	}
+
+	RingbufHandle_t ringBuf = sm->GetEventRingBuf();
+	if (!ringBuf)
+	{
+	    ESP_LOGE("state.cpp", "Failed to get event queue while starting ProcessEventQueueTask");
+	}
+	while(true) {
+       
+
+		size_t item_size;
+		Event *event = (Event *)xRingbufferReceive(ringBuf, &item_size, portMAX_DELAY);
+
+		// Check received item
+		if (item_size != NULL)
+		{
+			if (!sm->ProcessEvent(*event))
+			{
+				xRingbufferSend(ringBuf, (void *)new Event(*event), sizeof(event), pdMS_TO_TICKS(50));
+			}
+
+			vRingbufferReturnItem(ringBuf, (void *)event);
+		}
     }
+}
+
+void StateMachine::Start() {
+	xTaskCreate(&StateMachine::ProcessEventQueueTask, "ProcessEventQueueTask", 2048 * 16, this, 5, NULL);
+	xTaskCreate(&StateMachine::ProcessUpdateSpeedQueueTask, "ProcessUpdateSpeedQueueTask", 2048 * 8, this, 5, NULL);
 }
 
 void StateMachine::ProcessUpdateSpeedQueueTask(void* params) {
-    StateMachine* stateMachine = static_cast<StateMachine*>(params);
+	StateMachine* sm = static_cast<StateMachine*>(params);
+	RingbufHandle_t ringBuf = sm->GetUpdateSpeedQueue();
+	if(!sm) {
+		ESP_LOGE("state.cpp", "Failed to cast params to StateMachine while starting ProcessUpdateSpeedQueueTask");
+	}
+	if (!ringBuf) {
+		ESP_LOGE("state.cpp", "Failed to get update speed queue while starting ProcessUpdateSpeedQueueTask");
+	}
     while(true) {
-        
-        UpdateSpeedEventData eventData;
-        xQueueReceive(stateMachine->myUpdateSpeedQueue, &eventData, portMAX_DELAY);
-        stateMachine->processSpeedEvent(eventData);
-    }
-}
+        size_t item_size;
+		UpdateSpeedEventData *eventData = (UpdateSpeedEventData *)xRingbufferReceive(ringBuf, &item_size, portMAX_DELAY);
+		if (!item_size != NULL)
+		{
+			// ignore speed changes while stopping
+			if (sm->GetState() == State::StoppingLeft || sm->GetState() == State::StoppingRight)
+			{
+				xRingbufferSend(ringBuf,(void*) new UpdateSpeedEventData(*eventData), sizeof(eventData), pdMS_TO_TICKS(1000));
+			}
+			else
+			{
+				sm->myStepper->UpdateSpeeds(eventData->myNormalSpeed, eventData->myRapidSpeed);
+			}
 
-bool StateMachine::AddUpdateSpeedEvent(UpdateSpeedEventData eventData) {
-    //ESP_LOGI("state.cpp", "Adding update speed event to queue");
-    if(xQueueSend( myUpdateSpeedQueue, &eventData, 0 ) != pdPASS) {
-        ESP_LOGE("state.cpp", "Failed to send update speed event to queue");
-        return false;
-    }
-    //ESP_LOGI("state.cpp", "Update speed event added to queue");
-    return true;
+			vRingbufferReturnItem(ringBuf, (void *)eventData);
+		}
+
+		
+	}
 }
 
 void StateMachine::MoveLeftAction() {
@@ -96,16 +133,6 @@ void StateMachine::NormalSpeedAction() {
     //ESP_LOGI("state.cpp", "Done requesting stepper set normal speed");
 }
 
-void StateMachine::UpdateSpeedAction(UpdateSpeedEventData eventData) {
-    //ESP_LOGI("state.cpp", "Update speeds");
-    if(myStepper->IsStopped()) {
-        currentState = State::Stopped;
-        //myStepper->UpdateNormalSpeed(0);
-    }
-    myStepper->UpdateSpeeds(eventData.myNormalSpeed,eventData.myRapidSpeed);
-    //ESP_LOGI("state.cpp", "Done requesting stepper update speeds");
-}
-
 void StateMachine::StopLeftAction() {
     ESP_LOGI("state.cpp", "Stopping");
     currentState = State::StoppingLeft;
@@ -120,26 +147,30 @@ void StateMachine::StopRightAction() {
     //ESP_LOGI("state.cpp", "Done requesting stepper stop");
 }
 
-void StateMachine::processEvent(Event event) {
+bool StateMachine::ProcessEvent(Event event) {
     switch (currentState) {
         case State::Stopped:
             //ESP_LOGI("state.cpp", "State is stopped");
             if (event == Event::LeftPressed) {
                 MoveLeftAction();
-            } else if (event == Event::RightPressed) {
+				return true;
+			} else if (event == Event::RightPressed) {
                 MoveRightAction();
+				return true;
             }
             break;
 
         case State::MovingLeft:
             if (event == Event::LeftReleased) {
                 StopLeftAction();
+				return true;
             } 
             break;
 
         case State::MovingRight:
             if (event == Event::RightReleased) {
                 StopRightAction();
+				return true;
             } 
             break;
 
@@ -148,11 +179,12 @@ void StateMachine::processEvent(Event event) {
         case State::StoppingLeft:
             if (event == Event::LeftPressed) {
                 MoveLeftAction();
+				return true;
             } 
             else if (event == Event::RightPressed) {
                 //Requeue, gotta wait till we're stopped first.
-                AddEvent(event);
-            }
+				return false;
+			}
             break;
 
         case State::StoppingRight:
@@ -161,8 +193,8 @@ void StateMachine::processEvent(Event event) {
             } 
             else if (event == Event::LeftPressed) {
                 //Requeue, gotta wait till we're stopped first.
-                AddEvent(event);
-            }
+				return false;
+			}
             break; 
 
         default:    
@@ -179,8 +211,7 @@ void StateMachine::processEvent(Event event) {
     default:
         break;
     }
+
+	return true;
 }
 
-void StateMachine::processSpeedEvent(UpdateSpeedEventData eventData) {
-            UpdateSpeedAction(std::move(eventData));
-}

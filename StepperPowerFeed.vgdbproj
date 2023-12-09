@@ -98,6 +98,14 @@
     <PostDebugActions />
     <DebugStopActions />
     <BreakMode>Default</BreakMode>
+    <CustomBreakCommand>
+      <SkipWhenRunningCommandList>false</SkipWhenRunningCommandList>
+      <RemoteHost>
+        <HostName>BuildMachine</HostName>
+        <Transport>BuiltinShortcut</Transport>
+      </RemoteHost>
+      <BackgroundMode xsi:nil="true" />
+    </CustomBreakCommand>
   </CustomDebug>
   <DeviceTerminalSettings>
     <Connection xsi:type="com.sysprogs.terminal.connection.serial">
@@ -252,7 +260,11 @@
   </Configurations>
   <ProgramArgumentsSuggestions />
   <Debug xsi:type="com.visualgdb.debug.embedded">
-    <AdditionalStartupCommands />
+    <AdditionalStartupCommands>
+      <GDBPreStartupCommands />
+      <GDBStartupCommands />
+      <GDBFinalizationCommands />
+    </AdditionalStartupCommands>
     <AdditionalGDBSettings>
       <Features>
         <DisableAutoDetection>false</DisableAutoDetection>
@@ -285,12 +297,12 @@
       <EnableNonStopMode>false</EnableNonStopMode>
       <MaxBreakpointLimit>0</MaxBreakpointLimit>
       <EnableVerboseMode>true</EnableVerboseMode>
-      <EnablePrettyPrinters>false</EnablePrettyPrinters>
+      <EnablePrettyPrinters>true</EnablePrettyPrinters>
     </AdditionalGDBSettings>
     <DebugMethod>
       <ID>openocd</ID>
       <Configuration xsi:type="com.visualgdb.edp.openocd.settings.esp32">
-        <CommandLine>-f interface/esp_usb_jtag.cfg -c "adapter_khz 3000" -f target/esp32s3.cfg</CommandLine>
+        <CommandLine>-f interface/esp_usb_jtag.cfg -c "adapter_khz 20000" -f target/esp32s3.cfg</CommandLine>
         <ExtraParameters>
           <Frequency xsi:nil="true" />
           <BoostedFrequency xsi:nil="true" />
@@ -325,17 +337,17 @@
     <SemihostingSupport>Enabled</SemihostingSupport>
     <SemihostingPollingDelay>0</SemihostingPollingDelay>
     <StepIntoEntryPoint>false</StepIntoEntryPoint>
-    <ReloadFirmwareOnReset>false</ReloadFirmwareOnReset>
+    <ReloadFirmwareOnReset>true</ReloadFirmwareOnReset>
     <ValidateEndOfStackAddress>true</ValidateEndOfStackAddress>
     <StopAtEntryPoint>false</StopAtEntryPoint>
     <EnableVirtualHalts>false</EnableVirtualHalts>
     <DynamicAnalysisSettings />
     <EndOfStackSymbol>_estack</EndOfStackSymbol>
     <TimestampProviderTicksPerSecond>0</TimestampProviderTicksPerSecond>
-    <KeepConsoleAfterExit>false</KeepConsoleAfterExit>
-    <UnusedStackFillPattern xsi:nil="true" />
+    <KeepConsoleAfterExit>true</KeepConsoleAfterExit>
+    <UnusedStackFillPattern>2779096485</UnusedStackFillPattern>
     <SoftwareTracingSettings>
-      <TraceWhileDebugging>true</TraceWhileDebugging>
+      <TraceWhileDebugging>false</TraceWhileDebugging>
       <AutoStart>false</AutoStart>
       <StaticTracePrograms xsi:type="InsideWorkArea" />
       <DynamicProgramAreaSize>0</DynamicProgramAreaSize>

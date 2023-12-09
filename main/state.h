@@ -6,7 +6,8 @@
 #include "stepper.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/queue.h"
+#include "freertos/ringbuf.h"
+#include "shared.h"
 
 enum class State {
     MovingLeft,
@@ -43,34 +44,53 @@ public:
             myRapidSpeed(aRapidSpeed) {};
     int16_t myNormalSpeed;
     int16_t myRapidSpeed;
+
+    // Copy constructor
+    UpdateSpeedEventData(const UpdateSpeedEventData& other) 
+        :   myNormalSpeed(other.myNormalSpeed),
+            myRapidSpeed(other.myRapidSpeed) {};
+
+    // Copy assignment operator
+    UpdateSpeedEventData& operator=(const UpdateSpeedEventData& other) {
+        if (this != &other) {
+            myNormalSpeed = other.myNormalSpeed;
+            myRapidSpeed = other.myRapidSpeed;
+        }
+        return *this;
+    }
+
+    // Destructor
+    ~UpdateSpeedEventData() {}
 };
 
 class StateMachine {
 public:
-    StateMachine(int dirPin, int enablePin, int stepPin, uint16_t rapidSpeed);
-    void AddEvent(Event event);
-    bool AddUpdateSpeedEvent(UpdateSpeedEventData data);
+  StateMachine(std::shared_ptr<Stepper> aStepper);
+  void Start();
+
+  State GetState() { return currentState; }
+  RingbufHandle_t GetEventRingBuf() { return myEventRingBuf; }
+
+  RingbufHandle_t GetUpdateSpeedQueue() { return myUpdateSpeedRingbuf; }
 
 private:
     void MoveLeftAction();
     void MoveRightAction();
     void RapidSpeedAction();
     void NormalSpeedAction();
-    void UpdateSpeedAction(UpdateSpeedEventData data);
     void StopLeftAction();
     void StopRightAction();
 
     static void ProcessEventQueueTask(void* params);
-    static void ProcessUpdateSpeedQueueTask(void* params);
-    void processEvent(Event event);
-    void processSpeedEvent(UpdateSpeedEventData data);
+	static void ProcessUpdateSpeedQueueTask(void *params);
+    bool ProcessEvent(Event event);
 
     State currentState;
     SpeedState currentSpeedState; //TODO probably don't need this, if we can update using debouncer.Changed()
-    Stepper* myStepper;
+	std::shared_ptr<Stepper> myStepper;
     TaskHandle_t myProcessQueueTaskHandle;
-    QueueHandle_t myEventQueue;
-    QueueHandle_t myUpdateSpeedQueue;
+	RingbufHandle_t myEventRingBuf;
+	RingbufHandle_t myUpdateSpeedRingbuf;
 };
 
 #endif // STATE_H

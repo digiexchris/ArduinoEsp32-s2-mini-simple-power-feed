@@ -13,16 +13,18 @@
 
 class SpeedUpdateHandler {
     public:
-        SpeedUpdateHandler(adc1_channel_t speedPin, std::shared_ptr<StateMachine> aStateMachine, uint32_t maxDriverFreq);
+	    SpeedUpdateHandler(adc1_channel_t speedPin, RingbufHandle_t aRingBuf, uint32_t maxDriverFreq);
         uint32_t GetNormalSpeed();
         uint32_t GetRapidSpeed();
         static void UpdateTask(void* params);
         void UpdateSpeeds();
+		
+	    void Start();
 
     private:
         uint32_t myMaxDriverFreq;
         TaskHandle_t updateTaskHandle;
-        std::shared_ptr<StateMachine> myStateMachine;
+        RingbufHandle_t mySpeedEventRingBuf;
         adc1_channel_t speedPin;
         std::atomic<uint32_t> setSpeedADC = 0;
         std::atomic<uint32_t> rapidSpeed = 0;

@@ -28,28 +28,60 @@
 
 static std::shared_ptr<SpeedUpdateHandler> mySpeedUpdateHandler;
 static std::shared_ptr<StateMachine> myState;
+
+static std::shared_ptr<Stepper> myStepper;
+
 Debouncer* leftSwitch;
 Debouncer* rightSwitch;
 Debouncer* rapidSwitch;
 
 void setup() {
-  ESP_LOGI("main.cpp", "Setup start");
-  myState = std::make_shared<StateMachine>(dirPinStepper, enablePinStepper, stepPinStepper, MAX_DRIVER_STEPS_PER_SECOND);
-  mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState, MAX_DRIVER_STEPS_PER_SECOND);
-  leftSwitch = new Debouncer(myState, LEFTPIN, 50);
-  leftSwitch->setSwitchPressedEvent(Event::LeftPressed);
-  leftSwitch->setSwitchReleasedEvent(Event::LeftReleased);
-  // rightSwitch = new Debouncer(myState, RIGHTPIN, 50);
-  // rightSwitch->setSwitchPressedEvent(Event::RightPressed);
-  // rightSwitch->setSwitchReleasedEvent(Event::RightReleased);
-  // rapidSwitch = new Debouncer(myState, RAPIDPIN, 50);
-  // rapidSwitch->setSwitchPressedEvent(Event::RapidPressed);
-  // rapidSwitch->setSwitchReleasedEvent(Event::RapidReleased);
-  // ESP_LOGI("main.cpp", "Setup complete");
+	ESP_LOGI("main.cpp", "Setup start");
+	myStepper = std::make_shared<Stepper>();
+	myStepper->Init(dirPinStepper, enablePinStepper, stepPinStepper, MAX_DRIVER_STEPS_PER_SECOND);
+	myState = std::make_shared<StateMachine>(myStepper);
+	mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState->GetUpdateSpeedQueue(), MAX_DRIVER_STEPS_PER_SECOND);
+	leftSwitch = new Debouncer(myState->GetEventRingBuf(), LEFTPIN, 50);
+	leftSwitch->setSwitchPressedEvent(Event::LeftPressed);
+	leftSwitch->setSwitchReleasedEvent(Event::LeftReleased);
 
-  leftSwitch->start();
-  // rightSwitch->start();
-  // rapidSwitch->start();
+	rightSwitch = new Debouncer(myState->GetEventRingBuf(), RIGHTPIN, 50);
+	rightSwitch->setSwitchPressedEvent(Event::RightPressed);
+	rightSwitch->setSwitchReleasedEvent(Event::RightReleased);
+
+	rapidSwitch = new Debouncer(myState->GetEventRingBuf(), RAPIDPIN, 50);
+	rapidSwitch->setSwitchPressedEvent(Event::RapidPressed);
+	rapidSwitch->setSwitchReleasedEvent(Event::RapidReleased);
+  
+	// ESP_LOGI("main.cpp", "Setup complete");
+  
+	//Start state FIRST or the queues will fill and hang
+	myState->Start();
+	mySpeedUpdateHandler->Start();
+	leftSwitch->start();
+	rightSwitch->start();
+//	rapidSwitch->start();
+  
+	ESP_LOGI("main.cpp", "tasks started");
+}
+
+const char *stateToString(State aState)
+{
+  switch (aState)
+  {
+  case State::MovingLeft:
+	  return "MovingLeft";
+  case State::MovingRight:
+	  return "MovingRight";
+  case State::StoppingLeft:
+	  return "StoppingLeft";
+  case State::StoppingRight:
+	  return "StoppingRight";
+  case State::Stopped:
+	  return "Stopped";
+  default:
+	  return "Unknown";
+  }
 }
 
 extern "C" void app_main()
@@ -57,11 +89,15 @@ extern "C" void app_main()
   esp_log_level_set("main.cpp",ESP_LOG_ERROR);
   esp_log_level_set("state.cpp",ESP_LOG_INFO);
   esp_log_level_set("stepper.cpp",ESP_LOG_ERROR);
+  esp_log_level_set("esp32s3.cpu1", ESP_LOG_INFO);
   setup();
-
+//
   while(1) {
-    vTaskDelay(portTICK_PERIOD_MS * 100);
-    
+    vTaskDelay(portTICK_PERIOD_MS * 1000);
+	const char * state = stateToString(myState->GetState());
+    ESP_LOGI("Current State", "%s", state);
+	ESP_LOGI("Stepper State", "%s", myStepper->GetState().c_str());
+	ESP_LOGI("Current Speed", "%d", myStepper->GetCurrentSpeed());
   }
 
   // while(1) {
