@@ -4,6 +4,8 @@
 #include <driver/adc.h>
 #include <driver/adc_types_legacy.h>
 
+#define DEBUG_ABORTS 1
+
 #define dirPinStepper 4
 #define enablePinStepper 5
 #define stepPinStepper 6

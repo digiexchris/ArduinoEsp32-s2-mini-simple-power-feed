@@ -7,34 +7,22 @@
 
 StateMachine::StateMachine(std::shared_ptr<Stepper> aStepper) : currentState(State::Stopped), currentSpeedState(SpeedState::Normal) {
     myStepper = aStepper;
-	myEventRingBuf = xRingbufferCreate(1024, RINGBUF_TYPE_NOSPLIT);
-	if (!myEventRingBuf)
-	{
-		ESP_LOGE("state.cpp", "Failed to create event queue");
-	}
+	myEventRingBuf = xRingbufferCreate(sizeof(Event)*1024, RINGBUF_TYPE_NOSPLIT);
+	ASSERT_MSG(myEventRingBuf, "StateMachine", "Failed to create event ringbuf");
 
-	myUpdateSpeedRingbuf = xRingbufferCreate(1024, RINGBUF_TYPE_NOSPLIT);;
-	if (!myUpdateSpeedRingbuf)
-	{
-		ESP_LOGE("state.cpp", "Failed to create update speed queue");
-	}
-//	myUpdateSpeedQueue->
+	myUpdateSpeedRingbuf = xRingbufferCreate(sizeof(UpdateSpeedEventData)*1024, RINGBUF_TYPE_NOSPLIT);;
+	ASSERT_MSG(myUpdateSpeedRingbuf, "StateMachine", "Failed to create update speed ringbuf");
 	
     ESP_LOGI("state.cpp", "State Machine init complete");
 }
 
 void StateMachine::ProcessEventQueueTask(void* params) {
     StateMachine* sm = static_cast<StateMachine*>(params);
-	if (!sm)
-	{
-		ESP_LOGE("state.cpp", "Failed to cast params to StateMachine while starting ProcessUpdateSpeedQueueTask");
-	}
+	ASSERT_MSG(sm, "ProccessEventQueueTask", "StateMachine was null on start of task");
 
 	RingbufHandle_t ringBuf = sm->GetEventRingBuf();
-	if (!ringBuf)
-	{
-	    ESP_LOGE("state.cpp", "Failed to get event queue while starting ProcessEventQueueTask");
-	}
+	ASSERT_MSG(ringBuf, "ProccessEventQueueTask", "Event ringbuf was null on start of task");
+
 	while(true) {
        
 
@@ -55,11 +43,8 @@ void StateMachine::ProcessEventQueueTask(void* params) {
 			
 			delete event;
 		}
-		
-		if(event) {
-			//should never happen, delete it just in case
-			delete (event);
-		}
+
+		ASSERT(!event);
 	}
 }
 
@@ -70,14 +55,11 @@ void StateMachine::Start() {
 
 void StateMachine::ProcessUpdateSpeedQueueTask(void* params) {
 	StateMachine* sm = static_cast<StateMachine*>(params);
+	ASSERT_MSG(sm, "ProcessUpdateSpeedQueueTask", "StateMachine was null on start of task");
 	RingbufHandle_t ringBuf = sm->GetUpdateSpeedQueue();
-	if(!sm) {
-		ESP_LOGE("state.cpp", "Failed to cast params to StateMachine while starting ProcessUpdateSpeedQueueTask");
-	}
-	if (!ringBuf) {
-		ESP_LOGE("state.cpp", "Failed to get update speed queue while starting ProcessUpdateSpeedQueueTask");
-	}
-    while(true) {
+	ASSERT_MSG(ringBuf, "ProcessUpdateSpeedQueueTask", "Update speed ringbuf was null on start of task");
+	
+	while(true) {
         size_t item_size;
 
 		UpdateSpeedEventData* eventData = static_cast<UpdateSpeedEventData*>(xRingbufferReceive(ringBuf, &item_size, portMAX_DELAY));
@@ -149,10 +131,10 @@ void StateMachine::NormalSpeedAction() {
 
 void StateMachine::CheckIfStoppedTask(void* params) {
 	StateMachine* sm = static_cast<StateMachine*>(params);
+	ASSERT_MSG(sm, "CheckIfStoppedTask", "StateMachine was null on start of task");
 	RingbufHandle_t rb = sm->GetEventRingBuf();
-	if(!sm) {
-		ESP_LOGE("state.cpp", "Failed to cast params to StateMachine while starting CheckIfStopped");
-	}
+	ASSERT_MSG(rb, "CheckIfStoppedTask", "Event ringbuf was null on start of task");
+	
 	bool isStopped = false;
 	while(!isStopped) {
 		vTaskDelay(pdMS_TO_TICKS(150));

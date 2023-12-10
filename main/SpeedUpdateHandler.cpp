@@ -90,11 +90,6 @@ void SpeedUpdateHandler::UpdateSpeeds() {
         
             setSpeedADC.store(AVERAGED, std::memory_order_relaxed);
 
-//			UBaseType_t res = xRingbufferSend(mySpeedEventRingBuf, (void *)new UpdateSpeedEventData(mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), rapidSpeed), sizeof(UpdateSpeedEventData), pdMS_TO_TICKS(100));
-//			if (res != pdTRUE)
-//			{
-//				ESP_LOGE("SpeedUpdateHandler.cpp", "Failed to send update speed event to queue");
-//			}
 			auto eventData = new UpdateSpeedEventData(mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), rapidSpeed);
 			UBaseType_t res = xRingbufferSend(mySpeedEventRingBuf, eventData, sizeof(UpdateSpeedEventData), pdMS_TO_TICKS(100));
 			if (res == pdTRUE)
@@ -104,7 +99,7 @@ void SpeedUpdateHandler::UpdateSpeeds() {
 			}
 			else
 			{
-				ESP_LOGE("SpeedUpdateHandler.cpp", "Failed to send update speed event to queue");
+				ASSERT_MSG(false, "SpeedUpdateHandler.cpp", "Failed to send update speed event to queue");
 				// eventData will be automatically deleted here if not sent
 				delete eventData;
 			}
