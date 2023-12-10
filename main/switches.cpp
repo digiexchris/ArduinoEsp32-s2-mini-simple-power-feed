@@ -42,6 +42,7 @@ void Debouncer::Start()
 	{
 		gpio_isr_handler_add(aSwitch->mySwitchPin, DebounceHandler, aSwitch.get());
 	}
+	xTaskCreatePinnedToCore(DebounceTask, "DebounceTask", 2048, nullptr, 1, nullptr, 0);
 }
 
 void IRAM_ATTR Debouncer::DebounceHandler(void *arg)

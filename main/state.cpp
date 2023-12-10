@@ -11,12 +11,13 @@ ESP_EVENT_DEFINE_BASE(STATE_MACHINE_EVENT);
 
 StateMachine::StateMachine(std::shared_ptr<Stepper> aStepper) : currentState(State::Stopped), currentSpeedState(SpeedState::Normal) {
     myStepper = aStepper;
+	myRef = this;
 
 	esp_event_loop_args_t loopArgs = {
 		.queue_size = 16,
 		.task_name = "StateMachineEventLoop", // task will be created
 		.task_priority = uxTaskPriorityGet(NULL),
-		.task_stack_size = 33072,
+		.task_stack_size = 3072,
 		.task_core_id = tskNO_AFFINITY};
 
 	ESP_ERROR_CHECK(esp_event_loop_create(&loopArgs, &myEventLoop));
@@ -29,7 +30,28 @@ StateMachine::StateMachine(std::shared_ptr<Stepper> aStepper) : currentState(Sta
     ESP_LOGI("state.cpp", "State Machine init complete");
 }
 
-void StateMachine::ProcessEventLoopTask(void *stateMachine, esp_event_base_t base, int32_t id, void *payload) {
+void StateMachine::Start()
+{
+//	esp_event_handler_register()
+	ESP_ERROR_CHECK(esp_event_handler_instance_register_with(myEventLoop, STATE_MACHINE_EVENT, ESP_EVENT_ANY_ID, ProcessEventLoopIteration, myRef, nullptr));
+//esp_event_handler_instance_t
+	xTaskCreate(StateMachine::EventLoopRunnerTask, "StateMachineEventLoop", 3072, this, uxTaskPriorityGet(NULL) + 1, &myEventLoopTaskHandle);
+
+	//	xTaskCreate(&StateMachine::ProcessEventQueueTask, "ProcessEventQueueTask", 2048 * 24, this, 5, NULL);
+	//	xTaskCreate(&StateMachine::ProcessUpdateSpeedQueueTask, "ProcessUpdateSpeedQueueTask", 1024 * 24, this, 5, NULL);
+}
+
+void StateMachine::EventLoopRunnerTask(void *stateMachine)
+{
+	StateMachine *sm = static_cast<StateMachine *>(stateMachine);
+	while (1)
+	{
+		esp_event_loop_run(sm->myEventLoop, 100);
+		vTaskDelay(10);
+	}
+}
+
+void StateMachine::ProcessEventLoopIteration(void *stateMachine, esp_event_base_t base, int32_t id, void *payload) {
 	//ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 	StateMachine *sm = static_cast<StateMachine *>(stateMachine);
 	ASSERT_MSG(sm, "ProccessEventQueueTask", "StateMachine was null on start of task");
@@ -38,77 +60,12 @@ void StateMachine::ProcessEventLoopTask(void *stateMachine, esp_event_base_t bas
 	
 	EventData *eventData = static_cast<EventData *>(payload);
 
-//	RingbufHandle_t ringBuf = sm->GetEventRingBuf();
-//	ASSERT_MSG(ringBuf, "ProccessEventQueueTask", "Event ringbuf was null on start of task");
-//	//Event *event;
-//	
-//	while(true) {
-//       
-//
-//		size_t item_size;
-//		event = (Event *)xRingbufferReceive(ringBuf, &item_size, portMAX_DELAY);
-//
-//		// Check received item
-//		if (item_size)
-//		{
 	sm->ProcessEvent(event, eventData);
-	//			{//need to implement //the stopped state detector. Also this requeue doesn't work. also maybe ignore the reverse instead of requeue? make them center the handle and retry.
-	//				//xRingbufferSend(ringBuf, (void *)new Event(*event), sizeof(*event), pdMS_TO_TICKS(50));
-	//
-	//				//its decided. Just ignore the false case.
-	//			}
 
-	//			vRingbufferReturnItem(ringBuf, event);
-	//			event = nullptr;
-	//		}
-
-	// ASSERT(!event);
-	//	}
 	delete eventData;
 
 	vTaskDelete(NULL);
 }
-
-void StateMachine::Start() {
-	ESP_ERROR_CHECK(esp_event_handler_instance_register_with(myEventLoop, STATE_MACHINE_EVENT, ESP_EVENT_ANY_ID, ProcessEventLoopTask, myEventLoop, NULL));
-//	xTaskCreate(&StateMachine::ProcessEventQueueTask, "ProcessEventQueueTask", 2048 * 24, this, 5, NULL);
-//	xTaskCreate(&StateMachine::ProcessUpdateSpeedQueueTask, "ProcessUpdateSpeedQueueTask", 1024 * 24, this, 5, NULL);
-}
-//
-//void StateMachine::ProcessUpdateSpeedQueueTask(void* params) {
-//	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-//	StateMachine* sm = static_cast<StateMachine*>(params);
-//	ASSERT_MSG(sm, "ProcessUpdateSpeedQueueTask", "StateMachine was null on start of task");
-//	RingbufHandle_t ringBuf = sm->GetUpdateSpeedQueue();
-//	ASSERT_MSG(ringBuf, "ProcessUpdateSpeedQueueTask", "Update speed ringbuf was null on start of task");
-//
-//	UpdateSpeedEventData *eventData;
-//
-//	while(true) {
-//        size_t item_size;
-//
-//		eventData = static_cast<UpdateSpeedEventData*>(xRingbufferReceive(ringBuf, &item_size, portMAX_DELAY));
-//
-//		if (item_size)
-//		{
-//			// ignore speed changes while stopping
-//			if (sm->GetState() == State::StoppingLeft || sm->GetState() == State::StoppingRight)
-//			{
-//				//dont need this, it'll just resend since the delta is there xRingbufferSend(ringBuf, eventData, item_size, pdMS_TO_TICKS(1000));
-//
-//			}
-//			else
-//			{
-//				sm->myStepper->UpdateSpeeds(eventData->myNormalSpeed, eventData->myRapidSpeed);
-//				
-//			}
-//			
-//			vRingbufferReturnItem(ringBuf, eventData);
-//
-//			eventData = nullptr;
-//		}
-//	}
-//}
 
 void StateMachine::MoveLeftAction() {
     if(currentState == State::MovingLeft) {
@@ -265,7 +222,8 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
 			break;
 		case Event::UpdateSpeed: 
 		{
-			UpdateSpeedEventData *eventData = static_cast<UpdateSpeedEventData *>(eventPayload);
+			UpdateSpeedEventData* eventData = static_cast<UpdateSpeedEventData*>(eventPayload);
+			ASSERT_MSG(eventData, "StateMachine", "Failed to cast event data to UpdateSpeedEventData");
 			myStepper->UpdateSpeeds(eventData->myNormalSpeed, eventData->myRapidSpeed);
 			break;
 		}

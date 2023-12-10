@@ -54,7 +54,7 @@ void setup() {
 	//Start state FIRST or the queues will fill and hang
 	myState->Start();
 	mySpeedUpdateHandler->Start();
-	//Debouncer::Start();
+	Debouncer::Start();
   
 	ESP_LOGI("main.cpp", "tasks started");
 }

@@ -53,7 +53,6 @@ uint32_t SpeedUpdateHandler::GetRapidSpeed() {
 void SpeedUpdateHandler::UpdateSpeeds() {
 	//heap_trace_init_standalone(trace_record, NUM_RECORDS);
 	//ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-	UpdateSpeedEventData eventData;
 
 	while (true)
 	{
@@ -93,7 +92,7 @@ void SpeedUpdateHandler::UpdateSpeeds() {
         
             setSpeedADC.store(AVERAGED, std::memory_order_relaxed);
 
-			const void* eventData = new UpdateSpeedEventData(mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), rapidSpeed);
+			UpdateSpeedEventData* eventData = new UpdateSpeedEventData(mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), rapidSpeed);
 
 			ESP_ERROR_CHECK(esp_event_post_to(myEventLoop, STATE_MACHINE_EVENT, static_cast<int32_t>(Event::UpdateSpeed), &eventData, sizeof(UpdateSpeedEventData), portMAX_DELAY));
 

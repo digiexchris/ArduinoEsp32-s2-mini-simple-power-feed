@@ -42,7 +42,9 @@ enum class Event {
 
 
 class EventData {
-
+  public:
+		EventData() {};
+		virtual ~EventData() {};
 };
 
 class UpdateSpeedEventData : public EventData {
@@ -69,7 +71,7 @@ public:
     }
 
     // Destructor
-    ~UpdateSpeedEventData() {}
+    ~UpdateSpeedEventData() override {}
 };
 
 class StateMachine {
@@ -95,7 +97,8 @@ private:
 
 	void CreateStoppingTask();
 
-	static void ProcessEventLoopTask(void *stateMachine, esp_event_base_t base, int32_t id, void *eventData);
+	static void EventLoopRunnerTask(void *args);
+	static void ProcessEventLoopIteration(void *stateMachine, esp_event_base_t base, int32_t id, void *eventData);
 	//static void ProcessUpdateSpeedQueueTask(void *params);
     bool ProcessEvent(Event event, EventData* eventData);
 
@@ -104,6 +107,8 @@ private:
 	std::shared_ptr<Stepper> myStepper;
     TaskHandle_t myProcessQueueTaskHandle;
 	esp_event_loop_handle_t myEventLoop;
+	TaskHandle_t myEventLoopTaskHandle;
+	StateMachine* myRef;
 	//esp_event_loop_handle_t myUpdateSpeedEventLoop;
 };
 
