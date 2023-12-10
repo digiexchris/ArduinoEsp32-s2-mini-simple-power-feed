@@ -44,8 +44,17 @@ uint32_t SpeedUpdateHandler::GetNormalSpeed() {
 uint32_t SpeedUpdateHandler::GetRapidSpeed() {
     return rapidSpeed;
 }
+
+#include "esp_heap_caps.h"
+#include "esp_heap_trace.h"
+#define NUM_RECORDS 100
+static heap_trace_record_t trace_record[NUM_RECORDS]; // This buffer must be in internal RAM
+
 void SpeedUpdateHandler::UpdateSpeeds() {
+	//heap_trace_init_standalone(trace_record, NUM_RECORDS);
+	
      while(true) {
+		//heap_trace_start(HEAP_TRACE_LEAKS);
         SUM = SUM - READINGS[INDEX];       // Remove the oldest entry from the sum
 
         try {
@@ -86,19 +95,23 @@ void SpeedUpdateHandler::UpdateSpeeds() {
 //			{
 //				ESP_LOGE("SpeedUpdateHandler.cpp", "Failed to send update speed event to queue");
 //			}
-			auto eventData = std::make_unique<UpdateSpeedEventData>(mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), rapidSpeed);
-			UBaseType_t res = xRingbufferSend(mySpeedEventRingBuf, static_cast<void *>(eventData.get()), sizeof(UpdateSpeedEventData), pdMS_TO_TICKS(100));
+			auto eventData = new UpdateSpeedEventData(mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), rapidSpeed);
+			UBaseType_t res = xRingbufferSend(mySpeedEventRingBuf, eventData, sizeof(UpdateSpeedEventData), pdMS_TO_TICKS(100));
 			if (res == pdTRUE)
 			{
 				// Transfer ownership to the ring buffer
-				eventData.release();
+				//eventData;
 			}
 			else
 			{
 				ESP_LOGE("SpeedUpdateHandler.cpp", "Failed to send update speed event to queue");
 				// eventData will be automatically deleted here if not sent
+				delete eventData;
 			}
         }
+
+		//heap_trace_stop();
+		//heap_trace_dump();
         
         vTaskDelay(pdMS_TO_TICKS(100));
     }

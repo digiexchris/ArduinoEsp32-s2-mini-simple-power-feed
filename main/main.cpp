@@ -78,10 +78,7 @@ const char *stateToString(State aState)
   }
 }
 
-#include "esp_heap_caps.h"
-#include "esp_heap_trace.h"
-#define NUM_RECORDS 100
-static heap_trace_record_t trace_record[NUM_RECORDS]; // This buffer must be in internal RAM
+
 
 extern "C" void app_main()
 {
@@ -91,20 +88,18 @@ extern "C" void app_main()
   esp_log_level_set("esp32s3.cpu1", ESP_LOG_INFO);
   setup();
 
-  heap_trace_init_standalone(trace_record, NUM_RECORDS);
+  
 
   //
   while(1) {
     
-	heap_trace_start(HEAP_TRACE_LEAKS);
 	const char * state = stateToString(myState->GetState());
     ESP_LOGI("Current State", "%s", state);
 	ESP_LOGI("Stepper State", "%s", myStepper->GetState().c_str());
 	ESP_LOGI("Current Speed", "%d", myStepper->GetCurrentSpeed());
 	
 	vTaskDelay(portTICK_PERIOD_MS * 1000);
-	heap_trace_stop();
-	heap_trace_dump();
+
   }
 
   // while(1) {

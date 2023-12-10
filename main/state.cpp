@@ -47,9 +47,13 @@ void StateMachine::ProcessEventQueueTask(void* params) {
 			if (!sm->ProcessEvent(*event))
 			{//need to implement //the stopped state detector. Also this requeue doesn't work. also maybe ignore the reverse instead of requeue? make them center the handle and retry.
 				//xRingbufferSend(ringBuf, (void *)new Event(*event), sizeof(*event), pdMS_TO_TICKS(50));
+				
+				//its decided. Just ignore the false case.
 			}
 
-			vRingbufferReturnItem(ringBuf, (void *)event);
+			vRingbufferReturnItem(ringBuf, event);
+			
+			delete event;
 		}
 		
 		if(event) {
@@ -76,21 +80,25 @@ void StateMachine::ProcessUpdateSpeedQueueTask(void* params) {
     while(true) {
         size_t item_size;
 
-		UpdateSpeedEventData *eventData = static_cast<UpdateSpeedEventData *>(xRingbufferReceive(ringBuf, &item_size, portMAX_DELAY));
+		UpdateSpeedEventData* eventData = static_cast<UpdateSpeedEventData*>(xRingbufferReceive(ringBuf, &item_size, portMAX_DELAY));
 
 		if (item_size)
 		{
 			// ignore speed changes while stopping
 			if (sm->GetState() == State::StoppingLeft || sm->GetState() == State::StoppingRight)
 			{
-				xRingbufferSend(ringBuf, (void *)eventData, item_size, pdMS_TO_TICKS(1000));
+				//dont need this, it'll just resend since the delta is there xRingbufferSend(ringBuf, eventData, item_size, pdMS_TO_TICKS(1000));
 
 			}
 			else
 			{
 				sm->myStepper->UpdateSpeeds(eventData->myNormalSpeed, eventData->myRapidSpeed);
-				vRingbufferReturnItem(ringBuf, (void *)eventData);
+				
 			}
+			
+			vRingbufferReturnItem(ringBuf, eventData);
+			
+			delete eventData;
 		}
 	}
 }

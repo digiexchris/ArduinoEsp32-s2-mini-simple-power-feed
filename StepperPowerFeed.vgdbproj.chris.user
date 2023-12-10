@@ -9,7 +9,20 @@
       <Syscalls />
       <CXXCatchpoints />
     </CatchpointConfiguration>
-    <VisualWatchPreferences />
+    <VisualWatches />
+    <VisualWatchPreferences>
+      <DefaultProvider>com.sysprogs.imagewatch</DefaultProvider>
+      <ProviderPreferences>
+        <VisualWatchProviderPreferences>
+          <ProviderID>com.sysprogs.imagewatch</ProviderID>
+          <Preferences>
+            <ViewMode>ZoomedOut</ViewMode>
+            <Defaults />
+            <DefaultPixelFormat>com.sysprogs.imagewatch.encoded</DefaultPixelFormat>
+          </Preferences>
+        </VisualWatchProviderPreferences>
+      </ProviderPreferences>
+    </VisualWatchPreferences>
     <MaskInterruptsWhileStepping>false</MaskInterruptsWhileStepping>
     <MemoryWindowPreferences />
     <c />
