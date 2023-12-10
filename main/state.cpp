@@ -46,12 +46,17 @@ void StateMachine::ProcessEventQueueTask(void* params) {
 		{
 			if (!sm->ProcessEvent(*event))
 			{//need to implement //the stopped state detector. Also this requeue doesn't work. also maybe ignore the reverse instead of requeue? make them center the handle and retry.
-				//xRingbufferSend(ringBuf, (void *)new Event(*event), sizeof(event), pdMS_TO_TICKS(50));
+				//xRingbufferSend(ringBuf, (void *)new Event(*event), sizeof(*event), pdMS_TO_TICKS(50));
 			}
 
 			vRingbufferReturnItem(ringBuf, (void *)event);
 		}
-    }
+		
+		if(event) {
+			//should never happen, delete it just in case
+			delete (event);
+		}
+	}
 }
 
 void StateMachine::Start() {
@@ -70,23 +75,23 @@ void StateMachine::ProcessUpdateSpeedQueueTask(void* params) {
 	}
     while(true) {
         size_t item_size;
-		UpdateSpeedEventData *eventData = (UpdateSpeedEventData *)xRingbufferReceive(ringBuf, &item_size, portMAX_DELAY);
+
+		UpdateSpeedEventData *eventData = static_cast<UpdateSpeedEventData *>(xRingbufferReceive(ringBuf, &item_size, portMAX_DELAY));
+
 		if (item_size)
 		{
 			// ignore speed changes while stopping
 			if (sm->GetState() == State::StoppingLeft || sm->GetState() == State::StoppingRight)
 			{
-				xRingbufferSend(ringBuf,(void*) new UpdateSpeedEventData(*eventData), sizeof(eventData), pdMS_TO_TICKS(1000));
+				xRingbufferSend(ringBuf, (void *)eventData, item_size, pdMS_TO_TICKS(1000));
+
 			}
 			else
 			{
 				sm->myStepper->UpdateSpeeds(eventData->myNormalSpeed, eventData->myRapidSpeed);
+				vRingbufferReturnItem(ringBuf, (void *)eventData);
 			}
-
-			vRingbufferReturnItem(ringBuf, (void *)eventData);
 		}
-
-		
 	}
 }
 
@@ -134,17 +139,40 @@ void StateMachine::NormalSpeedAction() {
     //ESP_LOGI("state.cpp", "Done requesting stepper set normal speed");
 }
 
+void StateMachine::CheckIfStoppedTask(void* params) {
+	StateMachine* sm = static_cast<StateMachine*>(params);
+	RingbufHandle_t rb = sm->GetEventRingBuf();
+	if(!sm) {
+		ESP_LOGE("state.cpp", "Failed to cast params to StateMachine while starting CheckIfStopped");
+	}
+	bool isStopped = false;
+	while(!isStopped) {
+		vTaskDelay(pdMS_TO_TICKS(150));
+		std::shared_ptr<Event> event = std::make_shared<Event>(Event::SetStopped);
+		if(sm->myStepper->IsStopped()) {
+			xRingbufferSend(rb, event.get(), sizeof(*event), pdMS_TO_TICKS(250));
+			isStopped = true;
+		}
+	}
+}
+
+void StateMachine::CreateStoppingTask() {
+	xTaskCreatePinnedToCore(CheckIfStoppedTask, "processing-stopped", 24000, this, 1, nullptr, 0);
+}
+
 void StateMachine::StopLeftAction() {
     ESP_LOGI("state.cpp", "Stopping");
     currentState = State::StoppingLeft;
     myStepper->Stop();
-    //ESP_LOGI("state.cpp", "Done requesting stepper stop");
+	CreateStoppingTask();
+	//ESP_LOGI("state.cpp", "Done requesting stepper stop");
 }
 
 void StateMachine::StopRightAction() {
     ESP_LOGI("state.cpp", "Stopping");
     currentState = State::StoppingRight;
     myStepper->Stop();
+	CreateStoppingTask();
     //ESP_LOGI("state.cpp", "Done requesting stepper stop");
 }
 
@@ -178,23 +206,33 @@ bool StateMachine::ProcessEvent(Event event) {
         //if we are stopping but we ask to resume in the same direction, we can move again immediately.
         //may need to force clear the queue or something.
         case State::StoppingLeft:
-            if (event == Event::LeftPressed) {
-                MoveLeftAction();
+			if (event == Event::LeftPressed)
+			{
+				MoveLeftAction();
 				return true;
-            } 
-            else if (event == Event::RightPressed) {
-                //Requeue, gotta wait till we're stopped first.
+			}
+			else if (event == Event::RightPressed)
+			{
+				// Requeue, gotta wait till we're stopped first.
 				return false;
 			}
-            break;
+			else if (event == Event::SetStopped)
+			{
+				currentState = State::Stopped;
+			} 
+			break;
 
-        case State::StoppingRight:
+		case State::StoppingRight:
             if (event == Event::RightPressed) {
                 MoveRightAction();
             } 
             else if (event == Event::LeftPressed) {
                 //Requeue, gotta wait till we're stopped first.
 				return false;
+			}
+			else if (event == Event::SetStopped)
+			{
+				currentState = State::Stopped;
 			}
             break; 
 

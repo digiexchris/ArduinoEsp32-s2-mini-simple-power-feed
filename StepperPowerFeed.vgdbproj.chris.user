@@ -9,46 +9,7 @@
       <Syscalls />
       <CXXCatchpoints />
     </CatchpointConfiguration>
-    <VisualWatches>
-      <VisualWatch>
-        <Expression>highBound</Expression>
-        <VisualizerID>com.sysprogs.imagewatch</VisualizerID>
-      </VisualWatch>
-      <VisualWatch>
-        <Expression>lowBound</Expression>
-        <Settings xsi:type="GraphVisualWatchSettings">
-          <Type>UInt8</Type>
-          <ElementCount>1</ElementCount>
-          <ExplicitFields>ElementCount</ExplicitFields>
-        </Settings>
-        <VisualizerID>com.sysprogs.visualwatch.graph</VisualizerID>
-      </VisualWatch>
-      <VisualWatch>
-        <Expression>VALUE</Expression>
-        <Settings xsi:type="GraphVisualWatchSettings">
-          <Type>UInt8</Type>
-          <ElementCount>1</ElementCount>
-          <ExplicitFields>ElementCount</ExplicitFields>
-        </Settings>
-        <VisualizerID>com.sysprogs.visualwatch.graph</VisualizerID>
-      </VisualWatch>
-    </VisualWatches>
-    <VisualWatchPreferences>
-      <DefaultProvider>com.sysprogs.visualwatch.graph</DefaultProvider>
-      <ProviderPreferences>
-        <VisualWatchProviderPreferences>
-          <ProviderID>com.sysprogs.imagewatch</ProviderID>
-          <Preferences>
-            <ViewMode>ZoomedOut</ViewMode>
-            <Defaults />
-            <DefaultPixelFormat>com.sysprogs.imagewatch.encoded</DefaultPixelFormat>
-          </Preferences>
-        </VisualWatchProviderPreferences>
-        <VisualWatchProviderPreferences>
-          <ProviderID>com.sysprogs.visualwatch.graph</ProviderID>
-        </VisualWatchProviderPreferences>
-      </ProviderPreferences>
-    </VisualWatchPreferences>
+    <VisualWatchPreferences />
     <MaskInterruptsWhileStepping>false</MaskInterruptsWhileStepping>
     <MemoryWindowPreferences />
     <c />

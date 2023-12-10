@@ -29,7 +29,8 @@ enum class Event {
     RightReleased,
     RapidPressed,
     RapidReleased,
-    UpdateSpeed
+    UpdateSpeed,
+	SetStopped
 };
 
 class EventData {
@@ -81,7 +82,11 @@ private:
     void StopLeftAction();
     void StopRightAction();
 
-    static void ProcessEventQueueTask(void* params);
+	static void CheckIfStoppedTask(void* params);
+
+	void CreateStoppingTask();
+
+	static void ProcessEventQueueTask(void* params);
 	static void ProcessUpdateSpeedQueueTask(void *params);
     bool ProcessEvent(Event event);
 
