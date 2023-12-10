@@ -11,6 +11,8 @@
 #include <vector>
 #include <freertos/ringbuf.h>
 
+#include "esp_event.h"
+
 enum class SwitchName
 {
 	LEFT = 0,
@@ -38,14 +40,14 @@ struct Switch
 class Debouncer
 {
   public:
-	static void Create(RingbufHandle_t stateRingBuf);
+	static void Create(esp_event_loop_handle_t anEventLoop);
 
 	static void AddSwitch(SwitchName aName, std::shared_ptr<Switch> aSwitch);
 
 	static void Start();
 
   private:
-    static RingbufHandle_t myStateRingBuf;
+	static esp_event_loop_handle_t myEventLoop;
 	
 	static std::vector<std::shared_ptr<Switch>> mySwitches;
 

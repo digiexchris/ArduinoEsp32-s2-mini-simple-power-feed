@@ -9,6 +9,10 @@
 #include "freertos/ringbuf.h"
 #include "shared.h"
 
+#include "esp_event_base.h"
+#include "esp_event.h"
+
+
 enum class State {
     MovingLeft,
     MovingRight,
@@ -22,6 +26,8 @@ enum class SpeedState {
     Rapid
 };
 
+ESP_EVENT_DECLARE_BASE(STATE_MACHINE_EVENT);
+
 enum class Event {
     LeftPressed,
     LeftReleased,
@@ -32,6 +38,8 @@ enum class Event {
     UpdateSpeed,
 	SetStopped
 };
+
+
 
 class EventData {
 
@@ -70,9 +78,10 @@ public:
   void Start();
 
   State GetState() { return currentState; }
-  RingbufHandle_t GetEventRingBuf() { return myEventRingBuf; }
+  //RingbufHandle_t GetEventRingBuf() { return myEventLoop; }
+  esp_event_loop_handle_t GetEventLoop() { return myEventLoop; }
 
-  RingbufHandle_t GetUpdateSpeedQueue() { return myUpdateSpeedRingbuf; }
+  //RingbufHandle_t GetUpdateSpeedQueue() { return myUpdateSpeedEventLoop; }
 
 private:
     void MoveLeftAction();
@@ -86,16 +95,16 @@ private:
 
 	void CreateStoppingTask();
 
-	static void ProcessEventQueueTask(void* params);
-	static void ProcessUpdateSpeedQueueTask(void *params);
-    bool ProcessEvent(Event event);
+	static void ProcessEventLoopTask(void *stateMachine, esp_event_base_t base, int32_t id, void *eventData);
+	//static void ProcessUpdateSpeedQueueTask(void *params);
+    bool ProcessEvent(Event event, EventData* eventData);
 
     State currentState;
     SpeedState currentSpeedState; //TODO probably don't need this, if we can update using debouncer.Changed()
 	std::shared_ptr<Stepper> myStepper;
     TaskHandle_t myProcessQueueTaskHandle;
-	RingbufHandle_t myEventRingBuf;
-	RingbufHandle_t myUpdateSpeedRingbuf;
+	esp_event_loop_handle_t myEventLoop;
+	//esp_event_loop_handle_t myUpdateSpeedEventLoop;
 };
 
 #endif // STATE_H

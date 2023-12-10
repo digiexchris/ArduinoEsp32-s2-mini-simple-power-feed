@@ -12,7 +12,7 @@
 #include "state.h"
 class SpeedUpdateHandler {
     public:
-	    SpeedUpdateHandler(adc1_channel_t speedPin, RingbufHandle_t aRingBuf, uint32_t maxDriverFreq);
+	    SpeedUpdateHandler(adc1_channel_t speedPin, esp_event_loop_handle_t anEventLoop, uint32_t maxDriverFreq);
         uint32_t GetNormalSpeed();
         uint32_t GetRapidSpeed();
         static void UpdateTask(void* params);
@@ -23,7 +23,7 @@ class SpeedUpdateHandler {
     private:
         uint32_t myMaxDriverFreq;
         TaskHandle_t updateTaskHandle;
-        RingbufHandle_t mySpeedEventRingBuf;
+        esp_event_loop_handle_t myEventLoop;
         adc1_channel_t speedPin;
         std::atomic<uint32_t> setSpeedADC = 0;
         std::atomic<uint32_t> rapidSpeed = 0;

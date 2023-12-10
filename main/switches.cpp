@@ -1,7 +1,9 @@
 #include "switches.h"
 #include "shared.h"
+#include "state.h"
+#include "esp_event.h"
 
-RingbufHandle_t Debouncer::myStateRingBuf;
+esp_event_loop_handle_t Debouncer::myEventLoop;
 std::vector<std::shared_ptr<Switch>> Debouncer::mySwitches;
 
 Switch::Switch(gpio_num_t aSwitchPin, uint16_t aDelay, Event aPressedEvent, Event aReleasedEvent)
@@ -19,9 +21,9 @@ Switch::Switch(gpio_num_t aSwitchPin, uint16_t aDelay, Event aPressedEvent, Even
 	myHasPendingStateChange = false;
 }
 
-void Debouncer::Create(RingbufHandle_t stateRingBuf)
+void Debouncer::Create(esp_event_loop_handle_t anEventLoop)
 {
-	myStateRingBuf = stateRingBuf;
+	myEventLoop = anEventLoop;
 }
 
 void Debouncer::AddSwitch(SwitchName aName, std::shared_ptr<Switch>aSwitch)
@@ -61,7 +63,9 @@ void Debouncer::DebounceTask(void *arg)
 				// Process the stable state change
 				bool currentSwitchState = gpio_get_level(aSwitch->mySwitchPin);
 				Event event = currentSwitchState ? aSwitch->mySwitchPressedEvent : aSwitch->mySwitchReleasedEvent;
-				xRingbufferSend(Debouncer::myStateRingBuf, &event, sizeof(event), portMAX_DELAY);
+				//xRingbufferSend(Debouncer::myStateRingBuf, &event, sizeof(event), portMAX_DELAY);
+
+				ESP_ERROR_CHECK(esp_event_post_to(myEventLoop, STATE_MACHINE_EVENT, static_cast<int32_t>(event), nullptr, sizeof(nullptr), portMAX_DELAY));
 				aSwitch->myHasPendingStateChange = false;
 			}
 		}

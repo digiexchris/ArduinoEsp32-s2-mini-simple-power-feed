@@ -38,8 +38,8 @@ void setup() {
 	myStepper = std::make_shared<Stepper>();
 	myStepper->Init(dirPinStepper, enablePinStepper, stepPinStepper, MAX_DRIVER_STEPS_PER_SECOND);
 	myState = std::make_shared<StateMachine>(myStepper);
-	mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState->GetUpdateSpeedQueue(), MAX_DRIVER_STEPS_PER_SECOND);
-	Debouncer::Create(myState->GetEventRingBuf());
+	mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState->GetEventLoop(), MAX_DRIVER_STEPS_PER_SECOND);
+	Debouncer::Create(myState->GetEventLoop());
 	leftSwitch = std::make_shared<Switch>(LEFTPIN, 50, Event::LeftPressed, Event::LeftReleased);
 	rightSwitch = std::make_shared<Switch>(RIGHTPIN, 50, Event::RightPressed, Event::RightReleased);
 	rapidSwitch = std::make_shared<Switch>(RAPIDPIN, 50, Event::RapidPressed, Event::RapidReleased);
@@ -54,7 +54,7 @@ void setup() {
 	//Start state FIRST or the queues will fill and hang
 	myState->Start();
 	mySpeedUpdateHandler->Start();
-	Debouncer::Start();
+	//Debouncer::Start();
   
 	ESP_LOGI("main.cpp", "tasks started");
 }
