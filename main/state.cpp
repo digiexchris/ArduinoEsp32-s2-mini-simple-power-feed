@@ -63,8 +63,6 @@ void StateMachine::ProcessEventLoopIteration(void *stateMachine, esp_event_base_
 	sm->ProcessEvent(event, eventData);
 
 	delete eventData;
-
-	vTaskDelete(NULL);
 }
 
 void StateMachine::MoveLeftAction() {
@@ -222,8 +220,13 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
 			break;
 		case Event::UpdateSpeed: 
 		{
-			UpdateSpeedEventData* eventData = static_cast<UpdateSpeedEventData*>(eventPayload);
+			UpdateSpeedEventData* eventData = dynamic_cast<UpdateSpeedEventData*>(eventPayload);
 			ASSERT_MSG(eventData, "StateMachine", "Failed to cast event data to UpdateSpeedEventData");
+			
+			auto speed = eventData->myNormalSpeed;
+			//auto rapidSpeed = eventData->myRapidSpeed;
+			ESP_LOGI("StateMachine", "Updating speed to %d", speed);
+			
 			myStepper->UpdateSpeeds(eventData->myNormalSpeed, eventData->myRapidSpeed);
 			break;
 		}

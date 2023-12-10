@@ -93,10 +93,10 @@ extern "C" void app_main()
   //
   while(1) {
     
-	const char * state = stateToString(myState->GetState());
-    ESP_LOGI("Current State", "%s", state);
-	ESP_LOGI("Stepper State", "%s", myStepper->GetState().c_str());
-	ESP_LOGI("Current Speed", "%d", myStepper->GetCurrentSpeed());
+//	const char * state = stateToString(myState->GetState());
+//    ESP_LOGI("Current State", "%s", state);
+//	ESP_LOGI("Stepper State", "%s", myStepper->GetState().c_str());
+//	ESP_LOGI("Current Speed", "%d", myStepper->GetCurrentSpeed());
 	
 	vTaskDelay(portTICK_PERIOD_MS * 1000);
 
