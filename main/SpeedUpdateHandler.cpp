@@ -94,7 +94,7 @@ void SpeedUpdateHandler::UpdateSpeeds() {
 
 			UpdateSpeedEventData* eventData = new UpdateSpeedEventData(mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), rapidSpeed);
 
-			ESP_ERROR_CHECK(esp_event_post_to(myEventLoop, STATE_MACHINE_EVENT, static_cast<int32_t>(Event::UpdateSpeed), eventData, sizeof(eventData), portMAX_DELAY));
+			ESP_ERROR_CHECK(esp_event_post_to(myEventLoop, STATE_MACHINE_EVENT, static_cast<int32_t>(Event::UpdateSpeed), eventData, sizeof(UpdateSpeedEventData), portMAX_DELAY));
 
 //			//auto eventData = new UpdateSpeedEventData(mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), rapidSpeed);
 //			BaseType_t res = xRingbufferSendAcquire(mySpeedEventRingBuf, (void**)&eventData, sizeof(UpdateSpeedEventData), pdMS_TO_TICKS(100));

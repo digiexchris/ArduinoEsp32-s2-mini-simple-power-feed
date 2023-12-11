@@ -62,7 +62,7 @@ void StateMachine::ProcessEventLoopIteration(void *stateMachine, esp_event_base_
 
 	sm->ProcessEvent(event, eventData);
 
-	delete eventData;
+	//delete eventData;
 }
 
 void StateMachine::MoveLeftAction() {
