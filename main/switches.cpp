@@ -70,6 +70,6 @@ void Debouncer::DebounceTask(void *arg)
 				aSwitch->myHasPendingStateChange = false;
 			}
 		}
-		vTaskDelay(pdMS_TO_TICKS(50)); // Check every 10 ms, adjust as needed
+		vTaskDelay(pdMS_TO_TICKS(10)); // Check every 10 ms, adjust as needed
 	}
 }

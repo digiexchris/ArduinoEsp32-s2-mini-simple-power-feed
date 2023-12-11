@@ -35,7 +35,7 @@ void StateMachine::Start()
 //	esp_event_handler_register()
 	ESP_ERROR_CHECK(esp_event_handler_instance_register_with(myEventLoop, STATE_MACHINE_EVENT, ESP_EVENT_ANY_ID, ProcessEventLoopIteration, myRef, nullptr));
 //esp_event_handler_instance_t
-	xTaskCreate(StateMachine::EventLoopRunnerTask, "StateMachineEventLoop", 3072, this, uxTaskPriorityGet(NULL) + 1, &myEventLoopTaskHandle);
+	xTaskCreate(StateMachine::EventLoopRunnerTask, "StateMachineEventLoop", 3072*5, this, uxTaskPriorityGet(NULL) + 1, &myEventLoopTaskHandle);
 
 	//	xTaskCreate(&StateMachine::ProcessEventQueueTask, "ProcessEventQueueTask", 2048 * 24, this, 5, NULL);
 	//	xTaskCreate(&StateMachine::ProcessUpdateSpeedQueueTask, "ProcessUpdateSpeedQueueTask", 1024 * 24, this, 5, NULL);
@@ -116,7 +116,7 @@ void StateMachine::CheckIfStoppedTask(void* params) {
 	ASSERT_MSG(evht, "CheckIfStoppedTask", "Event ringbuf was null on start of task");
 	bool isStopped = false;
 	while(!isStopped) {
-		vTaskDelay(pdMS_TO_TICKS(150));
+		vTaskDelay(pdMS_TO_TICKS(10));
 		
 		if(sm->myStepper->IsStopped()) {
 			ESP_ERROR_CHECK(esp_event_post_to(evht, STATE_MACHINE_EVENT, static_cast<int32_t>(Event::SetStopped), nullptr, sizeof(nullptr), pdMS_TO_TICKS(250)));
@@ -190,6 +190,7 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
 			else if (event == Event::SetStopped)
 			{
 				currentState = State::Stopped;
+				ESP_LOGI("state.cpp", "Stopped");
 			} 
 			break;
 
@@ -204,6 +205,7 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
 			else if (event == Event::SetStopped)
 			{
 				currentState = State::Stopped;
+				ESP_LOGI("state.cpp", "Stopped");
 			}
             break; 
 
