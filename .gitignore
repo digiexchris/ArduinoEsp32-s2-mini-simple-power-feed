@@ -10,3 +10,4 @@ wifi.h
 sdkconfig.old
 heaptrace.gdbinit
 .visualgdb/CodeDB
+managed_components/
