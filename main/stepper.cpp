@@ -151,6 +151,8 @@ void Stepper::Stop() {
 }
 
 std::string Stepper::GetState() {
+	
+#ifdef USE_DENDO_STEPPER
 	switch (myStepper.getState())
 	{
 		
@@ -171,6 +173,16 @@ std::string Stepper::GetState() {
 			break;
 			
 	}
+
+#elif USE_FASTACCELSTEPPER
+	if (myStepper->isRunning()) {
+		return "RUNNING";
+	} else if (myStepper->isStopping()) {
+		return "STOPPING";
+	} else {
+		return "STOPPED";
+	}
+#endif
 	return "ERROR";
 }
 

@@ -2,7 +2,11 @@
 #define CONFIG_H
 
 #include <driver/adc.h>
-#include <driver/adc_types_legacy.h>
+#ifndef __IDF_VER__4_X_X
+//#include <driver/adc_types_legacy.h>
+#else
+#include <driver/adc.h>
+#endif
 
 #define DEBUG_ABORTS 1
 
@@ -12,6 +16,10 @@
 #define LEFTPIN GPIO_NUM_35
 #define RIGHTPIN GPIO_NUM_38
 #define RAPIDPIN GPIO_NUM_36
+#define ENCODER_A_PIN GPIO_NUM_17
+#define ENCODER_B_PIN GPIO_NUM_18
+#define ENCODER_BUTTON_PIN GPIO_NUM_8
+#define PIEZO_PIN GPIO_NUM_2
 #define ACCELERATION 20000 //steps/s/s
 #define DECELERATION 200000
 

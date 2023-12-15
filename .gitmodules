@@ -1,10 +1,11 @@
 [submodule "components/arduino"]
 	path = components/arduino
 	url = git@github.com:espressif/arduino-esp32.git
+	branch = idf-release/v4.4
 [submodule "components/DendoStepper"]
 	path = components/DendoStepper
 	url = git@github.com:eldendiss/DendoStepper.git
-	branch = master-idf-5.x
+	branch = master
 [submodule "components/FastAccelStepper"]
 	path = components/FastAccelStepper
 	url = git@github.com:gin66/FastAccelStepper.git

@@ -30,15 +30,15 @@ public:
 	 **@brief Get the current speed in hz
 	 **@return The current speed in hz
 	 **/
-//#ifdef USE_DENDO_STEPPER
-//	uint16_t GetCurrentSpeed() {
-//		return myStepper.getSpeed();
-//	}
-//#elif USE_FASTACCELSTEPPER
-//	uint16_t GetCurrentSpeed() {
-//		return myStepper->getCurrentSpeedInMilliHz()/1000;
-//	}
-//#endif
+#ifdef USE_DENDO_STEPPER
+	uint16_t GetCurrentSpeed() {
+		return myStepper.getSpeed();
+	}
+#elif USE_FASTACCELSTEPPER
+	uint16_t GetCurrentSpeed() {
+		return myStepper->getCurrentSpeedInMilliHz()/1000;
+	}
+#endif
 
 
 	std::string GetState();

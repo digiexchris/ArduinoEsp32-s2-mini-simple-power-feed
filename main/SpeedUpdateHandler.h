@@ -25,8 +25,8 @@ class SpeedUpdateHandler {
         TaskHandle_t updateTaskHandle;
         esp_event_loop_handle_t myEventLoop;
         adc1_channel_t speedPin;
-        std::atomic<uint32_t> setSpeedADC = 0;
-        std::atomic<uint32_t> rapidSpeed = 0;
+        std::atomic<uint32_t> setSpeedADC;
+        std::atomic<uint32_t> rapidSpeed;
         /*******Averaging filter stuff********/
         #define WINDOW_SIZE 8
         uint32_t INDEX = 0;
