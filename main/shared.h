@@ -18,21 +18,9 @@ static DRAM_ATTR std::shared_ptr<Stepper> myStepper;
 
 #define UNUSED(x) (void)(x);
 
-#include <cxxabi.h>
-#include <string>
-static std::string demangle(const char *name)
+template <class T>
+const T &clamp(const T &v, const T &lo, const T &hi)
 {
-	int status = 0;
-	char *result = abi::__cxa_demangle(name, NULL, NULL, &status);
-	std::string str_result;
-	if (status == 0)
-	{
-		str_result = result;
-	}
-	else
-	{
-		str_result = name;
-	}
-	free(result);
-	return str_result;
+	return (v < lo) ? lo : (hi < v) ? hi
+									: v;
 }

@@ -1,24 +1,23 @@
 #include "config.h"
+#include "stepper.h"
+
 #ifdef USE_FASTACCELSTEPPER
-#include "FastAccelStepper.h"
+//#include "FastAccelStepper.h"
 #elif USE_DENDO_STEPPER
 #include "DendoStepper.h"
 #else
 #error "No stepper library defined"
 #endif
 
-#include "stepper.h"
+
 #include <mutex>
 #include <algorithm>
 #include <esp_log.h>
 
 Stepper::Stepper() {
     myUseRapidSpeed = false;
-    // myUseRapidSpeedLock = new std::lock_guard<std::mutex>(myUseRapidSpeedMutex);
     myRapidSpeed = 0;
     myNormalSpeed = 0;
-    // myRapidSpeedLock = new std::lock_guard<std::mutex>(myRapidSpeedMutex);
-    // myNormalSpeedLock = new std::lock_guard<std::mutex>(myNormalSpeedMutex);
 }
 
 void Stepper::Init(uint8_t dirPin, uint8_t enablePin, uint8_t stepPin, uint16_t rapidSpeed){
@@ -35,8 +34,6 @@ void Stepper::Init(uint8_t dirPin, uint8_t enablePin, uint8_t stepPin, uint16_t 
 
     myStepper.config(&myStepperCfg);
     myStepper.init();
-    //TODO I don't know if it will accept a value of zero
-    //myStepper.setSpeed(0, FULL_SPEED_ACCELERATION_LINEAR_TIME, FULL_SPEED_DECELERATION_LINEAR_TIME);
     #elif USE_FASTACCELSTEPPER
     myEngine.init();
     myStepper = myEngine.stepperConnectToPin(stepPin);
@@ -68,13 +65,14 @@ bool Stepper::IsStopped() {
 void Stepper::UpdateActiveSpeed() {
     //NOTE do not put a lock_guard here, it will cause a deadlock. Many things call this function.
     double targetSpeed = myUseRapidSpeed ? myRapidSpeed : myNormalSpeed;
-    double currentSpeed = myStepper.getTargetSpeed();
 
-    if(targetSpeed == currentSpeed) {
-        return;
-    }
+#ifdef USE_DENDO_STEPPER
+	double currentSpeed = myStepper.getTargetSpeed();
 
-    #ifdef USE_DENDO_STEPPER
+	if (targetSpeed == currentSpeed)
+	{
+		return;
+	}
     double accTime = myStepper.getAcc();
     double decTime = myStepper.getDec();
 
@@ -95,14 +93,19 @@ void Stepper::UpdateActiveSpeed() {
         myStepper.setSpeed(targetSpeed, accTime, decTime);
     }
 
- #elif USE_FASTACCELSTEPPER   
-    const uint16_t curSpeed = myStepper->getSpeedInMilliHz()/1000;
-    const bool isRunning = myStepper->isRunning();
-    if(aSpeed != 0 && (curSpeed <= aSpeed - (aSpeed*0.05) || curSpeed >= aSpeed + (aSpeed*0.05))) {
-        ESP_LOGI("Stepper", "Speed is not within 0.5%% of target speed, updating");
-        ESP_ERROR_CHECK(myStepper->setSpeedInHz(aSpeed));
-        myStepper->applySpeedAcceleration();
-        #endif
+#elif USE_FASTACCELSTEPPER
+	const double currentSpeed = myStepper->getSpeedInMilliHz()/1000;
+	if (targetSpeed == currentSpeed)
+	{
+		return;
+	}
+    
+//    const bool isRunning = myStepper->isRunning();
+//    if(aSpeed != 0 && (curSpeed <= aSpeed - (aSpeed*0.05) || curSpeed >= aSpeed + (aSpeed*0.05))) {
+//        ESP_LOGI("Stepper", "Speed is not within 0.5%% of target speed, updating");
+    ESP_ERROR_CHECK(myStepper->setSpeedInHz(targetSpeed));
+    myStepper->applySpeedAcceleration();
+#endif
 }
 
 void Stepper::UpdateSpeeds(uint16_t aNormalSpeed, uint16_t aRapidSpeed) {
@@ -148,6 +151,8 @@ void Stepper::Stop() {
 }
 
 std::string Stepper::GetState() {
+	
+#ifdef USE_DENDO_STEPPER
 	switch (myStepper.getState())
 	{
 		
@@ -168,6 +173,16 @@ std::string Stepper::GetState() {
 			break;
 			
 	}
+
+#elif USE_FASTACCELSTEPPER
+	if (myStepper->isRunning()) {
+		return "RUNNING";
+	} else if (myStepper->isStopping()) {
+		return "STOPPING";
+	} else {
+		return "STOPPED";
+	}
+#endif
 	return "ERROR";
 }
 

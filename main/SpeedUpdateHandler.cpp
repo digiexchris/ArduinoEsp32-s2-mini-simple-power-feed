@@ -7,14 +7,14 @@
 #include "state.h"
 #include <esp_log.h>
 #include <freertos/ringbuf.h>
+#include "shared.h"
 
 SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, esp_event_loop_handle_t anEventLoop, uint32_t maxDriverFreq) {
     speedPin = aSpeedPin;
     myMaxDriverFreq = maxDriverFreq;
     rapidSpeed = maxDriverFreq;
 	myEventLoop = anEventLoop;
-
-    //pinMode(speedPin, INPUT);
+	setSpeedADC = 0;
 
     ESP_ERROR_CHECK(adc1_config_width(ADC_WIDTH_BIT_12));
     ESP_ERROR_CHECK(adc1_config_channel_atten(speedPin, ADC_ATTEN_DB_11));
@@ -88,21 +88,13 @@ void SpeedUpdateHandler::UpdateSpeeds() {
             highBound = setSpeed + (MAX_DRIVER_STEPS_PER_SECOND * 0.001);
         }
             
-        if(std::clamp(AVERAGED, lowBound, highBound) != AVERAGED) {
+        if(clamp(AVERAGED, lowBound, highBound) != AVERAGED) {
         
             setSpeedADC.store(AVERAGED, std::memory_order_relaxed);
 
 			UpdateSpeedEventData* eventData = new UpdateSpeedEventData(mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), rapidSpeed);
 
 			ESP_ERROR_CHECK(esp_event_post_to(myEventLoop, STATE_MACHINE_EVENT, static_cast<int32_t>(Event::UpdateSpeed), eventData, sizeof(UpdateSpeedEventData), portMAX_DELAY));
-
-//			//auto eventData = new UpdateSpeedEventData(mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), rapidSpeed);
-//			BaseType_t res = xRingbufferSendAcquire(mySpeedEventRingBuf, (void**)&eventData, sizeof(UpdateSpeedEventData), pdMS_TO_TICKS(100));
-//			ASSERT_MSG(res == pdTRUE, "SpeedUpdateHandler.cpp", "Failed to aquire mem in send update speed event to queue");
-//            eventData.myNormalSpeed = mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq);
-//			eventData.myRapidSpeed = rapidSpeed;
-//			res = xRingbufferSendComplete(mySpeedEventRingBuf, &eventData);
-//			ASSERT_MSG(res == pdTRUE, "SpeedUpdateHandler.cpp", "Failed to send update speed event to queue");
         }
 
 		//heap_trace_stop();
