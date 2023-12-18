@@ -20,7 +20,7 @@ StateMachine::StateMachine(std::shared_ptr<Stepper> aStepper) : currentState(Sta
 		.task_stack_size = 3072,
 		.task_core_id = tskNO_AFFINITY};
 
-	ESP_ERROR_CHECK(esp_event_loop_create(&loopArgs, &myEventLoop));
+	ESP_ERROR_CHECK(esp_event_loop_create(&loopArgs, myEventLoop.get()));
 	//myEventLoop = xRingbufferCreate(sizeof(Event)*1024, RINGBUF_TYPE_NOSPLIT);
 	ASSERT_MSG(myEventLoop, "StateMachine", "Failed to create event ringbuf");
 
@@ -33,7 +33,7 @@ StateMachine::StateMachine(std::shared_ptr<Stepper> aStepper) : currentState(Sta
 void StateMachine::Start()
 {
 //	esp_event_handler_register()
-	ESP_ERROR_CHECK(esp_event_handler_instance_register_with(myEventLoop, STATE_MACHINE_EVENT, ESP_EVENT_ANY_ID, ProcessEventLoopIteration, myRef, nullptr));
+	ESP_ERROR_CHECK(esp_event_handler_instance_register_with(myEventLoop.get(), STATE_MACHINE_EVENT, ESP_EVENT_ANY_ID, ProcessEventLoopIteration, myRef, nullptr));
 //esp_event_handler_instance_t
 	xTaskCreate(StateMachine::EventLoopRunnerTask, "StateMachineEventLoop", 3072*5, this, uxTaskPriorityGet(NULL) + 1, &myEventLoopTaskHandle);
 
@@ -46,7 +46,7 @@ void StateMachine::EventLoopRunnerTask(void *stateMachine)
 	StateMachine *sm = static_cast<StateMachine *>(stateMachine);
 	while (1)
 	{
-		esp_event_loop_run(sm->myEventLoop, 100);
+		esp_event_loop_run(sm->myEventLoop.get(), 100);
 		vTaskDelay(10);
 	}
 }
@@ -112,14 +112,14 @@ void StateMachine::NormalSpeedAction() {
 void StateMachine::CheckIfStoppedTask(void* params) {
 	StateMachine* sm = static_cast<StateMachine*>(params);
 	ASSERT_MSG(sm, "CheckIfStoppedTask", "StateMachine was null on start of task");
-	esp_event_loop_handle_t evht = sm->GetEventLoop();
+	std::shared_ptr<esp_event_loop_handle_t> evht = sm->GetEventLoop();
 	ASSERT_MSG(evht, "CheckIfStoppedTask", "Event ringbuf was null on start of task");
 	bool isStopped = false;
 	while(!isStopped) {
 		vTaskDelay(pdMS_TO_TICKS(10));
 		
 		if(sm->myStepper->IsStopped()) {
-			ESP_ERROR_CHECK(esp_event_post_to(evht, STATE_MACHINE_EVENT, static_cast<int32_t>(Event::SetStopped), nullptr, sizeof(nullptr), pdMS_TO_TICKS(250)));
+			ESP_ERROR_CHECK(esp_event_post_to(evht.get(), STATE_MACHINE_EVENT, static_cast<int32_t>(Event::SetStopped), nullptr, sizeof(nullptr), pdMS_TO_TICKS(250)));
 			isStopped = true;
 			break;
 		}

@@ -7,6 +7,7 @@
 
 #include <memory>
 #include "state.h"
+#include "StateMachine.h"
 #include <esp_log.h>
 #include <vector>
 #include <freertos/ringbuf.h>

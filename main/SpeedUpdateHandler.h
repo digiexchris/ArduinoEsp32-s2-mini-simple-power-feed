@@ -10,6 +10,11 @@
 #include <freertos/task.h>
 #include <atomic>
 #include "state.h"
+#include "StateMachine.h"
+
+//#define USE_SPEED_POT 1
+#define USE_SPEED_ENCODER 1
+
 class SpeedUpdateHandler {
     public:
 	    SpeedUpdateHandler(adc1_channel_t speedPin, esp_event_loop_handle_t anEventLoop, uint32_t maxDriverFreq);

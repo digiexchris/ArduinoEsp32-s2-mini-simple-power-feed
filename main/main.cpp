@@ -7,12 +7,14 @@
 
 #include <memory>
 #include "state.h"
+#include "StateMachine.h"
 #include <esp_log.h>
 #include "config.h"
 #include "shared.h"
 #include <soc/adc_channel.h>
 #include "SpeedUpdateHandler.h"
 #include "switches.h"
+#include "ui.h";
 
 // #define dirPinStepper 4
 // #define enablePinStepper 5
@@ -39,6 +41,8 @@ void setup() {
 	myStepper->Init(dirPinStepper, enablePinStepper, stepPinStepper, MAX_DRIVER_STEPS_PER_SECOND);
 	myState = std::make_shared<StateMachine>(myStepper);
 	mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState->GetEventLoop(), MAX_DRIVER_STEPS_PER_SECOND);
+	myUI = std::make_shared<UI>();
+	
 	Debouncer::Create(myState->GetEventLoop());
 	leftSwitch = std::make_shared<Switch>(LEFTPIN, 50, Event::LeftPressed, Event::LeftReleased);
 	rightSwitch = std::make_shared<Switch>(RIGHTPIN, 50, Event::RightPressed, Event::RightReleased);

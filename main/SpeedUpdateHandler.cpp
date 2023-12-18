@@ -8,6 +8,7 @@
 #include <esp_log.h>
 #include <freertos/ringbuf.h>
 #include "shared.h"
+#include "StateMachine.h"
 
 SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, esp_event_loop_handle_t anEventLoop, uint32_t maxDriverFreq) {
     speedPin = aSpeedPin;

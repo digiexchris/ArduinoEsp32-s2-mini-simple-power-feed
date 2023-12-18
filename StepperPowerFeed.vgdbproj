@@ -75,14 +75,12 @@
       <EnableFastUpToDateCheck>true</EnableFastUpToDateCheck>
       <ESPIDFExtension>
         <IDFCheckout>
-          <Version>v4.4.3</Version>
-          <Subdirectory>esp-idf/v4.4.3</Subdirectory>
+          <Subdirectory>/c/Espressif4.4.6/frameworks/esp-idf</Subdirectory>
           <Type>ESPIDF</Type>
         </IDFCheckout>
         <COMPort>COM12</COMPort>
         <SuppressTestPrerequisiteChecks>false</SuppressTestPrerequisiteChecks>
         <UseCCache>true</UseCCache>
-        <DeviceID>ESP32S3</DeviceID>
       </ESPIDFExtension>
     </ProjectModeSettings>
   </Build>
@@ -115,9 +113,12 @@
         <SearchInProjectDir>true</SearchInProjectDir>
         <SearchInSourceDirs>true</SearchInSourceDirs>
         <SearchInIncludeSubdirs>true</SearchInIncludeSubdirs>
+        <ExtraSearchDirs>
+          <string>lib\espp\components</string>
+        </ExtraSearchDirs>
       </DiscoverySettings>
       <CheckForClangFormatFiles>true</CheckForClangFormatFiles>
-      <FormattingEngine xsi:nil="true" />
+      <FormattingEngine>ClangFormat</FormattingEngine>
     </ExtraSettings>
     <CodeAnalyzerSettings>
       <Enabled>true</Enabled>

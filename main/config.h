@@ -8,6 +8,8 @@
 #include <driver/adc.h>
 #endif
 
+//#include <ssd1306.h>
+
 #define DEBUG_ABORTS 1
 
 #define dirPinStepper 4
@@ -23,9 +25,18 @@
 #define ACCELERATION 20000 //steps/s/s
 #define DECELERATION 200000
 
+#define I2C_MASTER_SCL_IO 47	  /*!< gpio number for I2C master clock */
+#define I2C_MASTER_SDA_IO 48	  /*!< gpio number for I2C master data  */
+#define I2C_MASTER_NUM I2C_NUM_1  /*!< I2C port number for master dev */
+#define I2C_MASTER_FREQ_HZ 100000 /*!< I2C master clock frequency */
+
 const adc1_channel_t speedPin = ADC1_CHANNEL_6;  //front knob pot, GPIO7 on the S3
 const double MAX_DRIVER_STEPS_PER_SECOND = 13000; // 20kHz max pulse freq in hz at 25/70 duty cycle, 13kHz at 50/50. FastAccelStepper is doing 50/50@13 :(
 const int stepsPerRev = 200;
+const double mmPerRev = 0.25 * 25.4 * 1.5 * 4; // 4 tpi lead screw, with 2 reductions
+const double mmPerStep = mmPerRev / stepsPerRev;
+const double stepsPerMm = stepsPerRev / mmPerRev;
+const double MAX_SPEED = MAX_DRIVER_STEPS_PER_SECOND / stepsPerMm;
 
 
 //#define USE_DENDO_STEPPER 1
