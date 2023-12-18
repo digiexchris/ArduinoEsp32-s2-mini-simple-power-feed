@@ -12,6 +12,3 @@ heaptrace.gdbinit
 .visualgdb/CodeDB
 managed_components/
 
-components/arduino
-
-components/FastAccelStepper

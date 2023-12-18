@@ -15,6 +15,7 @@
 #include "SpeedUpdateHandler.h"
 #include "switches.h"
 #include "ui.h";
+#include "driver/gpio.h"
 
 // #define dirPinStepper 4
 // #define enablePinStepper 5
