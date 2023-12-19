@@ -5,9 +5,3 @@
 [submodule "components/FastAccelStepper"]
 	path = components/FastAccelStepper
 	url = git@github.com:gin66/FastAccelStepper.git
-[submodule "components/esp-idf-lib"]
-	path = components/esp-idf-lib
-	url = git@github.com:UncleRus/esp-idf-lib.git
-[submodule "lib/espp"]
-	path = lib/espp
-	url = git@github.com:esp-cpp/espp.git
