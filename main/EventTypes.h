@@ -1,5 +1,10 @@
 #pragma once
 
+#include "esp_event.h"
+
+ESP_EVENT_DECLARE_BASE(STATE_MACHINE_EVENT);
+ESP_EVENT_DECLARE_BASE(UI_QUEUE_EVENT);
+
 enum class Event
 {
 	LeftPressed,
@@ -8,7 +13,8 @@ enum class Event
 	RightReleased,
 	RapidPressed,
 	RapidReleased,
-	UpdateSpeed,
+	UpdateNormalSpeed,
+	UpdateRapidSpeed,
 	SetStopped
 };
 
@@ -35,35 +41,30 @@ class EventData
 class UIEventData : public EventData
 {
   public:
-	UIEventData(uint8_t aSpeed = 0) 
+	UIEventData(uint32_t aSpeed = 0) 
 	{
 		mySpeed = aSpeed;
 	}
-	uint8_t mySpeed;
+	uint32_t mySpeed;
 };
 
 class UpdateSpeedEventData : public EventData
 {
   public:
 	UpdateSpeedEventData(){};
-	UpdateSpeedEventData(int16_t aNormalSpeed, int16_t aRapidSpeed)
-		: myNormalSpeed(aNormalSpeed),
-		  myRapidSpeed(aRapidSpeed){};
-	int16_t myNormalSpeed;
-	int16_t myRapidSpeed;
+	UpdateSpeedEventData(uint32_t aSpeed): mySpeed(aSpeed){};
+	int16_t mySpeed;
 
 	// Copy constructor
 	UpdateSpeedEventData(const UpdateSpeedEventData &other)
-		: myNormalSpeed(other.myNormalSpeed),
-		  myRapidSpeed(other.myRapidSpeed){};
+		: mySpeed(other.mySpeed){};
 
 	// Copy assignment operator
 	UpdateSpeedEventData &operator=(const UpdateSpeedEventData &other)
 	{
 		if (this != &other)
 		{
-			myNormalSpeed = other.myNormalSpeed;
-			myRapidSpeed = other.myRapidSpeed;
+			mySpeed = other.mySpeed;
 		}
 		return *this;
 	}

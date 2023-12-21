@@ -14,18 +14,16 @@
 #include "ui.h"
 #include "EventTypes.h"
 
-ESP_EVENT_DECLARE_BASE(STATE_MACHINE_EVENT);
-
 class StateMachine {
 public:
-  StateMachine(std::shared_ptr<Stepper> aStepper);
-  void Start();
+	StateMachine(std::shared_ptr<Stepper> aStepper, std::shared_ptr<esp_event_loop_handle_t> anUiEventLoop);
+	void Start();
 
-  State GetState() { return currentState; }
-  //RingbufHandle_t GetEventRingBuf() { return myEventLoop; }
-  std::shared_ptr<esp_event_loop_handle_t> GetEventLoop() { return myEventLoop; }
-
-  //RingbufHandle_t GetUpdateSpeedQueue() { return myUpdateSpeedEventLoop; }
+	State GetState() { return currentState; }
+	//RingbufHandle_t GetEventRingBuf() { return myEventLoop; }
+	std::shared_ptr<esp_event_loop_handle_t> GetEventLoop() { return myEventLoop; }
+	
+	//RingbufHandle_t GetUpdateSpeedQueue() { return myUpdateSpeedEventLoop; }
 
 private:
     void MoveLeftAction();

@@ -1,15 +1,15 @@
 dependencies:
-  espressif/ssd1306:
-    component_hash: bb9d18fd14ba2b11ca7ce426fc059e3ae7c44e7635e3a62eeae9e44c2ca0db46
+  espressif__ssd1306:
+    component_hash: null
     source:
-      service_url: https://api.components.espressif.com/
-      type: service
+      path: D:\Machining-tools\VisualGDBProjects\StepperPowerFeed\components\espressif__ssd1306
+      type: local
     version: 1.0.5
   idf:
     component_hash: null
     source:
       type: idf
-    version: 4.4.6
-manifest_hash: 5ec41f5f13536588314b835d22a21954ebb106bf43f21d1e26771c989ed8f2a8
-target: esp32
+    version: 4.4.3
+manifest_hash: 0819e0e9d1041a6dc13522d783db6854d81bd259d7ff3a8805136af5028c0b22
+target: esp32s3
 version: 1.0.0

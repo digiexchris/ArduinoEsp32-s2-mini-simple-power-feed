@@ -1,7 +1,14 @@
 #pragma once
 
 #include "state.h"
-#include <ssd1306.h>
+#include <driver/i2c.h>
+#include <u8g2.h>
+#include <memory>
+
+extern "C"
+{
+#include <u8g2_esp32_hal.h>
+};
 
 class Screen
 {
@@ -13,29 +20,33 @@ class Screen
 		IPM
 	} mySpeedUnit;
 
-	Screen(gpio_num_t sdaPin, gpio_num_t sclPin, i2c_port_t i2cPort, uint i2cClkFreq = 100000);
-	void SetSpeed(uint8_t aSpeed);
+	Screen(gpio_num_t sdaPin, gpio_num_t sclPin, i2c_port_t i2cPort, uint32_t i2cClkFreq = 100000);
+	void SetSpeed(uint32_t aSpeed);
 	void SetState(UIState aState);
 	void SetUnit(SpeedUnit aUnit);
 	void Update();
 	static void UpdateTask(void *pvParameters);
 	void SetSpeedState(SpeedState aSpeedState);
+	void Start();
 
   private:
-	uint8_t mySpeed;
-	uint8_t myPrevSpeed;
+	uint16_t mySpeed;
+	uint16_t myPrevSpeed;
 	UIState myState;
 	UIState myPrevState;
 	SpeedState mySpeedState;
 	SpeedState myPrevSpeedState;
 	SpeedUnit myPrevSpeedUnit;
-	ssd1306_handle_t ssd1306_dev;
-	i2c_config_t conf;
-	void DrawString(int x, int y, const char *str, int fontHeight, int fontWidth);
+	u8g2_t u8g2;
+	u8g2_esp32_hal_t u8g2_esp32_hal;
+	
+	static Screen* myRef;
+
+	void DrawString(int x, int y, const char *str, const uint8_t *fontData);
 	void DrawSpeed();
 	void DrawSpeedUnit();
 	void DrawState();
 	void DrawUnit();
 
-	double SpeedPerMinute();
+	float SpeedPerMinute();
 };

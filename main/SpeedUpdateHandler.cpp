@@ -9,19 +9,20 @@
 #include <freertos/ringbuf.h>
 #include "shared.h"
 #include "StateMachine.h"
+#include "esp_adc_cal.h"
 
-SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, esp_event_loop_handle_t anEventLoop, uint32_t maxDriverFreq) {
+SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, std::shared_ptr<esp_event_loop_handle_t> anEventLoop, uint32_t maxDriverFreq) {
     speedPin = aSpeedPin;
     myMaxDriverFreq = maxDriverFreq;
-    rapidSpeed = maxDriverFreq;
+	rapidSpeedADC = 0;
 	myEventLoop = anEventLoop;
 	setSpeedADC = 0;
+	myADC1Calibration = new esp_adc_cal_characteristics_t();
 
     ESP_ERROR_CHECK(adc1_config_width(ADC_WIDTH_BIT_12));
     ESP_ERROR_CHECK(adc1_config_channel_atten(speedPin, ADC_ATTEN_DB_11));
 
-    // esp_adc_cal_characteristics_t adc1_chars; // Define adc1_chars variable
-    // esp_adc_cal_characterize(ADC_UNIT_1 , ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 0, &adc1_chars);
+    esp_adc_cal_characterize(ADC_UNIT_1 , ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 0, myADC1Calibration);
 
 
     //initialize the averaging filter
@@ -43,7 +44,7 @@ uint32_t SpeedUpdateHandler::GetNormalSpeed() {
 }
 
 uint32_t SpeedUpdateHandler::GetRapidSpeed() {
-    return rapidSpeed;
+	return rapidSpeedADC;
 }
 
 //#include "esp_heap_caps.h"
@@ -61,7 +62,19 @@ void SpeedUpdateHandler::UpdateSpeeds() {
         SUM = SUM - READINGS[INDEX];       // Remove the oldest entry from the sum
 
         try {
-            VALUE = adc1_get_raw(speedPin);       // Read the next sensor value
+			uint32_t adc_reading = 0;
+			for (int i = 0; i < 10; i++)
+			{
+				adc_reading += adc1_get_raw(speedPin);
+				if (adc_reading == 0)
+				{
+					adc_reading = 1;
+				}
+			}
+			adc_reading /= 10;
+			VALUE = esp_adc_cal_raw_to_voltage(adc_reading, myADC1Calibration);
+			
+            //VALUE = adc1_get_raw(speedPin);       // Read the next sensor value
         }
         catch (const std::exception& e) {
             ESP_LOGE("SpeedUpdateHandler.cpp", "Error reading ADC: %s", e.what());
@@ -80,22 +93,22 @@ void SpeedUpdateHandler::UpdateSpeeds() {
         uint32_t setSpeed = setSpeedADC.load(std::memory_order_relaxed);
 
         uint32_t lowBound = 0;
-        if(setSpeed > (MAX_DRIVER_STEPS_PER_SECOND * 0.05)) {
-            lowBound = setSpeed - (MAX_DRIVER_STEPS_PER_SECOND * 0.01);
+        if(setSpeed > (MAX_DRIVER_STEPS_PER_SECOND * 0.0001)) {
+            lowBound = setSpeed - (MAX_DRIVER_STEPS_PER_SECOND * 0.0001);
         }
 
         uint32_t highBound = MAX_DRIVER_STEPS_PER_SECOND;
-        if(setSpeed < (MAX_DRIVER_STEPS_PER_SECOND - (MAX_DRIVER_STEPS_PER_SECOND * 0.001))) {
-            highBound = setSpeed + (MAX_DRIVER_STEPS_PER_SECOND * 0.001);
+        if(setSpeed < (MAX_DRIVER_STEPS_PER_SECOND - (MAX_DRIVER_STEPS_PER_SECOND * 0.0001))) {
+            highBound = setSpeed + (MAX_DRIVER_STEPS_PER_SECOND * 0.0001);
         }
             
         if(clamp(AVERAGED, lowBound, highBound) != AVERAGED) {
-        
-            setSpeedADC.store(AVERAGED, std::memory_order_relaxed);
 
-			UpdateSpeedEventData* eventData = new UpdateSpeedEventData(mapAdcToSpeed(AVERAGED, 0, 4095, 0, myMaxDriverFreq), rapidSpeed);
+			rapidSpeedADC.store(AVERAGED, std::memory_order_relaxed);
 
-			ESP_ERROR_CHECK(esp_event_post_to(myEventLoop, STATE_MACHINE_EVENT, static_cast<int32_t>(Event::UpdateSpeed), eventData, sizeof(UpdateSpeedEventData), portMAX_DELAY));
+			UpdateSpeedEventData *eventData = new UpdateSpeedEventData(mapAdcToSpeed(AVERAGED, 0, 3073, 0, myMaxDriverFreq));
+
+			ESP_ERROR_CHECK(esp_event_post_to(*myEventLoop, STATE_MACHINE_EVENT, static_cast<int32_t>(Event::UpdateRapidSpeed), eventData, sizeof(UpdateSpeedEventData), portMAX_DELAY));
         }
 
 		//heap_trace_stop();

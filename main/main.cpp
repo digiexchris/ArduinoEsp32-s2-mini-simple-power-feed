@@ -14,7 +14,7 @@
 #include <soc/adc_channel.h>
 #include "SpeedUpdateHandler.h"
 #include "switches.h"
-#include "ui.h";
+#include "ui.h"
 #include "driver/gpio.h"
 
 // #define dirPinStepper 4
@@ -39,10 +39,11 @@ void setup() {
 	
 	ESP_LOGI("main.cpp", "Setup start");
 	myStepper = std::make_shared<Stepper>();
+	myUI = std::make_shared<UI>(I2C_MASTER_SDA_IO, I2C_MASTER_SCL_IO, I2C_MASTER_NUM, I2C_MASTER_FREQ_HZ, ENCODER_A_PIN, ENCODER_B_PIN, ENCODER_BUTTON_PIN);
 	myStepper->Init(dirPinStepper, enablePinStepper, stepPinStepper, MAX_DRIVER_STEPS_PER_SECOND);
-	myState = std::make_shared<StateMachine>(myStepper);
+	myState = std::make_shared<StateMachine>(myStepper, myUI->GetUiEventLoop());
 	mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState->GetEventLoop(), MAX_DRIVER_STEPS_PER_SECOND);
-	myUI = std::make_shared<UI>();
+	
 	
 	Debouncer::Create(myState->GetEventLoop());
 	leftSwitch = std::make_shared<Switch>(LEFTPIN, 50, Event::LeftPressed, Event::LeftReleased);
@@ -60,8 +61,10 @@ void setup() {
 	myState->Start();
 	mySpeedUpdateHandler->Start();
 	Debouncer::Start();
+	myUI->Start();
   
 	ESP_LOGI("main.cpp", "tasks started");
+	
 }
 
 const char *stateToString(State aState)

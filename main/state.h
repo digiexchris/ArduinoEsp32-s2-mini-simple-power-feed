@@ -22,4 +22,4 @@ enum class UIState
 	MovingRight,
 	Stopping,
 	Stopped
-}
+};

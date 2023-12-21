@@ -1,7 +1,0 @@
-[submodule "components/DendoStepper"]
-	path = components/DendoStepper
-	url = git@github.com:eldendiss/DendoStepper.git
-	branch = master
-[submodule "components/FastAccelStepper"]
-	path = components/FastAccelStepper
-	url = git@github.com:gin66/FastAccelStepper.git

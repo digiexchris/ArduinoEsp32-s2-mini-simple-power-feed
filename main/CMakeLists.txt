@@ -3,9 +3,10 @@
 if(DEFINED USE_DENDO_STEPPER)
 
 idf_component_register(
-	SRCS "SpeedUpdateHandler.cpp" "main.cpp" "stepper.cpp" "state.cpp" switches.cpp ui.cpp
+	SRCS "Screen.cpp" "SpeedUpdateHandler.cpp" "main.cpp" "stepper.cpp" "state.cpp" switches.cpp ui.cpp
 	INCLUDE_DIRS "."
-	REQUIRES DendoStepper esp_event ) #FastAccelStepper arduino)
+	REQUIRED_IDF_TARGETS esp32-s3
+	REQUIRES DendoStepper esp_event ssd1306) #FastAccelStepper arduino)
 		component_compile_options(-Wno-error=format= -Wno-format)
 else()
 idf_component_register(
@@ -19,7 +20,8 @@ idf_component_register(
 		Event.cpp
 		Screen.cpp
 	INCLUDE_DIRS "."
-	REQUIRES esp_event FastAccelStepper arduino) #FastAccelStepper arduino)
+	REQUIRED_IDF_TARGETS esp32s3
+	REQUIRES esp_event FastAccelStepper arduino driver u8g2 u8g2-hal-esp-idf) #FastAccelStepper arduino)
 		component_compile_options(-Wno-error=format= -Wno-format)
 
 endif()

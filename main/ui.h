@@ -1,6 +1,5 @@
 #pragma once
 
-#include <ssd1306.h>
 
 #include "state.h"
 #include "EventTypes.h"
@@ -8,7 +7,7 @@
 #include <memory>
 #include "Screen.h"
 
-ESP_EVENT_DEFINE_BASE(UI_EVENT);
+
 
 //class SpeedEncoder
 //{
@@ -44,6 +43,6 @@ class UI
 	UI *myRef;
 	void HandleButton();
 	//SpeedEncoder* mySpeedEncoder;
-	Screen* myScreen;
+	std::unique_ptr<Screen> myScreen;
 	std::shared_ptr<esp_event_loop_handle_t> myUIEventLoop;
 };
