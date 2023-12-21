@@ -42,10 +42,6 @@ class SpeedUpdateHandler {
         uint32_t AVERAGED = 0;
 		esp_adc_cal_characteristics_t* myADC1Calibration;
         /*************************************/
-
-        uint32_t mapAdcToSpeed (uint16_t value, uint16_t inMin, uint16_t inMax, uint16_t outMin, uint16_t outMax) {
-            return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
-        };
 };
 
 #endif // SPEEDUPDATEHANDLER_H

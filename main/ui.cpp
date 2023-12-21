@@ -31,6 +31,29 @@ UI::UI(gpio_num_t sdaPin,
 	
 	myUIEventLoop = std::make_shared<esp_event_loop_handle_t>();
 	ESP_ERROR_CHECK(esp_event_loop_create(&loopArgs, myUIEventLoop.get()));
+
+
+	/* LED strip initialization with the GPIO and pixels number*/
+	led_strip_config_t strip_config = {
+		.strip_gpio_num = BLINK_GPIO,			  // The GPIO that connected to the LED strip's data line
+		.max_leds = 1,							  // The number of LEDs in the strip,
+		.led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
+		.led_model = LED_MODEL_WS2812,			  // LED strip model
+		.flags.invert_out = false,				  // whether to invert the output signal (useful when your hardware has a level inverter)
+	};
+
+	led_strip_rmt_config_t rmt_config = {
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
+		.rmt_channel = 0,
+#else
+		.clk_src = RMT_CLK_SRC_DEFAULT,	   // different clock source can lead to different power consumption
+		.resolution_hz = 10 * 1000 * 1000, // 10MHz
+		.flags.with_dma = false,		   // whether to enable the DMA feature
+#endif
+	};
+
+	ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &myLed));
+	
 }
 
 void UI::ProcessUIEventLoopTask(void *pvParameters)
@@ -58,6 +81,28 @@ void UI::ProcessUIEventLoopIteration(void *aUi, esp_event_base_t base, int32_t i
 	UIEventData *eventData = static_cast<UIEventData*>(payload);
 
 	ui->ProcessUIEvent(event, eventData);
+
+	led_strip_handle_t led_strip;
+
+	/* LED strip initialization with the GPIO and pixels number*/
+	led_strip_config_t strip_config = {
+		.strip_gpio_num = BLINK_GPIO,			  // The GPIO that connected to the LED strip's data line
+		.max_leds = 1,							  // The number of LEDs in the strip,
+		.led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
+		.led_model = LED_MODEL_WS2812,			  // LED strip model
+		.flags.invert_out = false,				  // whether to invert the output signal (useful when your hardware has a level inverter)
+	};
+
+	led_strip_rmt_config_t rmt_config = {
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
+		.rmt_channel = 0,
+#else
+		.clk_src = RMT_CLK_SRC_DEFAULT,	   // different clock source can lead to different power consumption
+		.resolution_hz = 10 * 1000 * 1000, // 10MHz
+		.flags.with_dma = false,		   // whether to enable the DMA feature
+#endif
+	};
+	ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
 }
 
 void UI::ProcessUIEvent(UIEvent aEvent, UIEventData *aEventData)

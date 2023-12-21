@@ -16,6 +16,7 @@
 #include "switches.h"
 #include "ui.h"
 #include "driver/gpio.h"
+#include "Encoder.h"
 
 // #define dirPinStepper 4
 // #define enablePinStepper 5
@@ -43,7 +44,7 @@ void setup() {
 	myStepper->Init(dirPinStepper, enablePinStepper, stepPinStepper, MAX_DRIVER_STEPS_PER_SECOND);
 	myState = std::make_shared<StateMachine>(myStepper, myUI->GetUiEventLoop());
 	mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState->GetEventLoop(), MAX_DRIVER_STEPS_PER_SECOND);
-	
+	myEncoder = std::make_shared<RotaryEncoder>(ENCODER_A_PIN, ENCODER_B_PIN, ENCODER_BUTTON_PIN, myState->GetEventLoop());
 	
 	Debouncer::Create(myState->GetEventLoop());
 	leftSwitch = std::make_shared<Switch>(LEFTPIN, 50, Event::LeftPressed, Event::LeftReleased);

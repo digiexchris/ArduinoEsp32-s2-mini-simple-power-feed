@@ -6,7 +6,7 @@
 #include <esp_event.h>
 #include <memory>
 #include "Screen.h"
-
+#include <led_strip.h>
 
 
 //class SpeedEncoder
@@ -45,4 +45,5 @@ class UI
 	//SpeedEncoder* mySpeedEncoder;
 	std::unique_ptr<Screen> myScreen;
 	std::shared_ptr<esp_event_loop_handle_t> myUIEventLoop;
+	led_strip_handle_t myLed;
 };

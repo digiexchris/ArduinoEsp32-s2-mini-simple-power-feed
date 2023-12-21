@@ -11,17 +11,18 @@ idf_component_register(
 else()
 idf_component_register(
 	SRCS
-		"SpeedUpdateHandler.cpp"
-		"main.cpp"
-		"stepper.cpp"
+		SpeedUpdateHandler.cpp
+		main.cpp
+		stepper.cpp
 		StateMachine.cpp
 		switches.cpp
 		ui.cpp
 		Event.cpp
 		Screen.cpp
-	INCLUDE_DIRS "."
+		Encoder.cpp
+	INCLUDE_DIRS .
 	REQUIRED_IDF_TARGETS esp32s3
-	REQUIRES esp_event FastAccelStepper arduino driver u8g2 u8g2-hal-esp-idf) #FastAccelStepper arduino)
+	REQUIRES esp_event FastAccelStepper arduino driver u8g2 u8g2-hal-esp-idf rmt-ws2812) #FastAccelStepper arduino)
 		component_compile_options(-Wno-error=format= -Wno-format)
 
 endif()

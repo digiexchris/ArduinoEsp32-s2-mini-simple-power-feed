@@ -23,19 +23,14 @@ Screen::Screen(gpio_num_t sdaPin, gpio_num_t sclPin, i2c_port_t i2cPort, uint32_
 	u8g2_esp32_hal_init(u8g2_esp32_hal);
 
 	u8g2_Setup_ssd1306_i2c_128x32_univision_f(
-      &u8g2, U8G2_R0,
-      // u8x8_byte_sw_i2c,
-      u8g2_esp32_i2c_byte_cb,
-      u8g2_esp32_gpio_and_delay_cb);  // init u8g2 structure
-	 
-	//u8g2_SetFont(&u8g2, u8g2_font_ncenB14_tr);
-	// u8g2_ClearBuffer(&u8g2);
+		&u8g2, U8G2_R0,
+		// u8x8_byte_sw_i2c,
+		u8g2_esp32_i2c_byte_cb,
+		u8g2_esp32_gpio_and_delay_cb); // init u8g2 structure
 
-	// u8g2_SendBuffer(&u8g2);
 
-	#endif
+#endif
 
-	
 	myPrevSpeedUnit = SpeedUnit::MMPM;
 	mySpeedUnit = SpeedUnit::MMPM;
 	mySpeed = 0;
@@ -44,33 +39,13 @@ Screen::Screen(gpio_num_t sdaPin, gpio_num_t sclPin, i2c_port_t i2cPort, uint32_
 	myPrevState = UIState::Stopped;
 	mySpeedState = SpeedState::Normal;
 	myPrevSpeedState = SpeedState::Normal;
-
-	
-	
-
-	//u8g2 = new U8G2_SSD1306_128X32_UNIVISION_2_HW_I2C(U8G2_R0, /* reset=*/ U8X8_PIN_NONE, /* clock=*/ sclPin, /* data=*/ sdaPin);
 }
 
 void Screen::UpdateTask(void *pvParameters)
 {
-	//Screen *screen = Screen::myRef.get(); //(Screen *)pvParameters;
-
 	while (true)
 	{
-		auto thing = myRef->u8g2;
 		myRef->Update();
-		
-//		u8g2_ClearBuffer(&screen->u8g2);
-//  
-//		u8g2_DrawBox(&screen->u8g2, 0, 26, 80, 6);
-//		u8g2_DrawFrame(&screen->u8g2, 0, 26, 100, 6);
-//
-//		
-//		u8g2_SetFont(&screen->u8g2, u8g2_font_ncenB14_tr);
-//		
-//		u8g2_DrawStr(&screen->u8g2, 2, 17, "Hi nkolban!");
-//		
-//		u8g2_SendBuffer(&screen->u8g2);
 		vTaskDelay(100 / portTICK_PERIOD_MS);
 	}
 }
@@ -79,7 +54,6 @@ void Screen::Start()
 	{
 		#if ENABLE_SSD1306
 		
-		//auto u8x8 = u8g2->u8x8;
 		u8x8_SetI2CAddress(&u8g2.u8x8, 0x78);
 
 		u8g2_InitDisplay(&u8g2); // send init sequence to the display, display is in
@@ -115,11 +89,6 @@ void Screen::Update()
 	}
 	
 	u8g2_SendBuffer(&u8g2);
-}
-
-void Screen::DrawString(int x, int y, const char *str, const uint8_t *fontData)
-{
-	//ssd1306_draw_string(ssd1306_dev, x, y, str, 1, 0);
 }
 
 void Screen::DrawState()

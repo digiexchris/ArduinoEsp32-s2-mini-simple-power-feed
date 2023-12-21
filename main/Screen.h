@@ -24,8 +24,8 @@ class Screen
 	void SetSpeed(uint32_t aSpeed);
 	void SetState(UIState aState);
 	void SetUnit(SpeedUnit aUnit);
-	void Update();
-	static void UpdateTask(void *pvParameters);
+	
+	
 	void SetSpeedState(SpeedState aSpeedState);
 	void Start();
 
@@ -41,8 +41,9 @@ class Screen
 	u8g2_esp32_hal_t u8g2_esp32_hal;
 	
 	static Screen* myRef;
-
-	void DrawString(int x, int y, const char *str, const uint8_t *fontData);
+	
+	static void UpdateTask(void *pvParameters);
+	void Update();
 	void DrawSpeed();
 	void DrawSpeedUnit();
 	void DrawState();
