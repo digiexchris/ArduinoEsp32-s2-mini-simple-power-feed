@@ -22,17 +22,17 @@
 #define LEFTPIN GPIO_NUM_35
 #define RIGHTPIN GPIO_NUM_38
 #define RAPIDPIN GPIO_NUM_36
-#define ENCODER_A_PIN GPIO_NUM_17
-#define ENCODER_B_PIN GPIO_NUM_18
-#define ENCODER_BUTTON_PIN GPIO_NUM_8
+#define ENCODER_A_PIN GPIO_NUM_18
+#define ENCODER_B_PIN GPIO_NUM_8
+#define ENCODER_BUTTON_PIN GPIO_NUM_17
 #define PIEZO_PIN GPIO_NUM_2
 #define ACCELERATION 20000 //steps/s/s
 #define DECELERATION 200000
 
 #define RGB_LED_PIN GPIO_NUM_48
 
-#define I2C_MASTER_SCL_IO  GPIO_NUM_47 /*!< gpio number for I2C master clock */
-#define I2C_MASTER_SDA_IO GPIO_NUM_48	  /*!< gpio number for I2C master data  */ gasdf;lkasjdf;lkasjdf;klas gotta change pins.
+#define I2C_MASTER_SCL_IO  GPIO_NUM_16 /*!< gpio number for I2C master clock */
+#define I2C_MASTER_SDA_IO GPIO_NUM_15	  /*!< gpio number for I2C master data  */
 #define I2C_MASTER_NUM I2C_NUM_1  /*!< I2C port number for master dev */
 // redefined in u8g2_hal #define I2C_MASTER_FREQ_HZ 100000 /*!< I2C master clock frequency */
 

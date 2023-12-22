@@ -69,6 +69,8 @@ void Screen::Start()
 		BaseType_t result = xTaskCreatePinnedToCore(&Screen::UpdateTask, "update screen", 4048, this, 1, nullptr, 0);
 		ASSERT_MSG(result == pdPASS, "Screen: Failed to create task, error: %d", result);
 		#endif
+
+		ESP_LOGI("Screen", "Screen init complete");
 	}
 
 void Screen::Update()

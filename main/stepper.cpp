@@ -117,7 +117,8 @@ void Stepper::UpdateRapidSpeed(uint16_t aRapidSpeed) {
 
 void Stepper::UpdateNormalSpeed(uint16_t aNormalSpeed)
 {
-	myNormalSpeed = aNormalSpeed;
+	//cap it at the rapid speed
+	myNormalSpeed = aNormalSpeed <= myRapidSpeed? aNormalSpeed : myRapidSpeed;
 	UpdateActiveSpeed();
 }
 

@@ -70,7 +70,7 @@ void SpeedUpdateHandler::UpdateSpeeds() {
 					adc_reading = 1;
 				}
 			}
-			adc_reading /= 10;
+			adc_reading /= 20;
 			VALUE = esp_adc_cal_raw_to_voltage(adc_reading, myADC1Calibration);
 			
             //VALUE = adc1_get_raw(speedPin);       // Read the next sensor value
@@ -89,16 +89,16 @@ void SpeedUpdateHandler::UpdateSpeeds() {
         AVERAGED = SUM / WINDOW_SIZE;
         //if the new speed is within a few of the current speed, don't bother updating it
 
-        uint32_t setSpeed = setSpeedADC.load(std::memory_order_relaxed);
+		uint32_t setSpeed = rapidSpeedADC.load(std::memory_order_relaxed);
 
         uint32_t lowBound = 0;
-        if(setSpeed > (MAX_DRIVER_STEPS_PER_SECOND * 0.0005)) {
-            lowBound = setSpeed - (MAX_DRIVER_STEPS_PER_SECOND * 0.0005);
+        if(setSpeed > 5) {
+			lowBound = setSpeed > 5 ? setSpeed - 5 : setSpeed;
         }
 
         uint32_t highBound = MAX_DRIVER_STEPS_PER_SECOND;
-        if(setSpeed < (MAX_DRIVER_STEPS_PER_SECOND - (MAX_DRIVER_STEPS_PER_SECOND * 0.0005))) {
-            highBound = setSpeed + (MAX_DRIVER_STEPS_PER_SECOND * 0.0005);
+        if(setSpeed < (MAX_DRIVER_STEPS_PER_SECOND - 5)) {
+			highBound = setSpeed < (MAX_DRIVER_STEPS_PER_SECOND - 5) ? setSpeed + 5 : setSpeed;
         }
             
         if(clamp(AVERAGED, lowBound, highBound) != AVERAGED) {
@@ -113,7 +113,7 @@ void SpeedUpdateHandler::UpdateSpeeds() {
 		//heap_trace_stop();
 		//heap_trace_dump();
         
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(150));
     }
 }
 

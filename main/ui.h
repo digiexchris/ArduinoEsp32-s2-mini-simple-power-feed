@@ -8,7 +8,6 @@
 #include "Screen.h"
 #include <led_strip.h>
 
-
 //class SpeedEncoder
 //{
 //  public:
@@ -42,8 +41,9 @@ class UI
   private:
 	UI *myRef;
 	void HandleButton();
+	led_strip_handle_t configureLed(gpio_num_t anLedPin);
 	//SpeedEncoder* mySpeedEncoder;
 	std::unique_ptr<Screen> myScreen;
 	std::shared_ptr<esp_event_loop_handle_t> myUIEventLoop;
-	led_strip_handle_t myLed;
+	led_strip_handle_t* myLedHandle;
 };

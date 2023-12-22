@@ -18,14 +18,14 @@ StateMachine::StateMachine(std::shared_ptr<Stepper> aStepper, std::shared_ptr<es
 		.queue_size = 16,
 		.task_name = "StateMachineEventLoop", // task will be created
 		.task_priority = uxTaskPriorityGet(NULL),
-		.task_stack_size = 3072,
+		.task_stack_size = 3072*2,
 		.task_core_id = tskNO_AFFINITY};
 
 	myEventLoop = std::make_shared<esp_event_loop_handle_t>();
 	auto loop = myEventLoop.get();
 	ESP_ERROR_CHECK(esp_event_loop_create(&loopArgs, loop));
 	//myEventLoop = xRingbufferCreate(sizeof(Event)*1024, RINGBUF_TYPE_NOSPLIT);
-	ASSERT_MSG(myEventLoop, "StateMachine", "Failed to create event ringbuf");
+	ASSERT_MSG(myEventLoop, "StateMachine", "Failed to create event loop");
 
 	//myUpdateSpeedEventLoop = xRingbufferCreate(sizeof(UpdateSpeedEventData)*1024*3, RINGBUF_TYPE_NOSPLIT);;
 	//ASSERT_MSG(myUpdateSpeedEventLoop, "StateMachine", "Failed to create update speed ringbuf");
@@ -231,7 +231,7 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
 
 			int16_t speed = eventData->mySpeed;
 			//auto rapidSpeed = eventData->myRapidSpeed;
-			ESP_LOGI("StateMachine", "Updating speed to %d", speed);
+			ESP_LOGI("StateMachine", "Updating rapid speed to %d", speed);
 
 			myStepper->UpdateRapidSpeed(speed);
 
@@ -246,7 +246,7 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
 
 			int16_t speed = eventData->mySpeed;
 			// auto rapidSpeed = eventData->myRapidSpeed;
-			ESP_LOGI("StateMachine", "Updating speed to %d", speed);
+			ESP_LOGI("StateMachine", "Updating normal speed to %d", speed);
 
 			myStepper->UpdateNormalSpeed(speed);
 

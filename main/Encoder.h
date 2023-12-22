@@ -3,6 +3,8 @@
 #include <esp_event.h>
 #include <memory>
 
+#include <rotary_encoder.h>
+
 class RotaryEncoder {
 public:
   RotaryEncoder(gpio_num_t anAPin,
@@ -22,7 +24,9 @@ private:
 	int count;
 	gpio_num_t myEncAPin;
 	gpio_num_t myEncBPin;
-	int16_t myPrevCount;
-	int16_t myCount;
+	int myPrevCount;
+	int myCount;
+	int mySavedOffset;
 	std::shared_ptr<esp_event_loop_handle_t> myEventLoop;
+	rotary_encoder_t *myEncoder;
 };

@@ -8,6 +8,7 @@
 #include <memory>
 #include <shared.h>
 #include "EventTypes.h"
+#include <led_strip.h>
 
 ESP_EVENT_DEFINE_BASE(UI_QUEUE_EVENT);
 
@@ -26,33 +27,20 @@ UI::UI(gpio_num_t sdaPin,
 		.queue_size = 16,
 		.task_name = "UIEventLoop", // task will be created
 		.task_priority = uxTaskPriorityGet(NULL),
-		.task_stack_size = 3072,
+		.task_stack_size = 3072*2,
 		.task_core_id = tskNO_AFFINITY};
 	
 	myUIEventLoop = std::make_shared<esp_event_loop_handle_t>();
 	ESP_ERROR_CHECK(esp_event_loop_create(&loopArgs, myUIEventLoop.get()));
 
 
-	/* LED strip initialization with the GPIO and pixels number*/
-	led_strip_config_t strip_config = {
-		.strip_gpio_num = BLINK_GPIO,			  // The GPIO that connected to the LED strip's data line
-		.max_leds = 1,							  // The number of LEDs in the strip,
-		.led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
-		.led_model = LED_MODEL_WS2812,			  // LED strip model
-		.flags.invert_out = false,				  // whether to invert the output signal (useful when your hardware has a level inverter)
-	};
+	auto led = configureLed(RGB_LED_PIN);
 
-	led_strip_rmt_config_t rmt_config = {
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
-		.rmt_channel = 0,
-#else
-		.clk_src = RMT_CLK_SRC_DEFAULT,	   // different clock source can lead to different power consumption
-		.resolution_hz = 10 * 1000 * 1000, // 10MHz
-		.flags.with_dma = false,		   // whether to enable the DMA feature
-#endif
-	};
-
-	ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &myLed));
+	// Clear LED strip (turn off all LEDs)
+	ESP_ERROR_CHECK(led_strip_clear(led));
+	// Flush RGB values to LEDs
+	ESP_ERROR_CHECK(led_strip_refresh(led));
+	
 	
 }
 
@@ -81,28 +69,6 @@ void UI::ProcessUIEventLoopIteration(void *aUi, esp_event_base_t base, int32_t i
 	UIEventData *eventData = static_cast<UIEventData*>(payload);
 
 	ui->ProcessUIEvent(event, eventData);
-
-	led_strip_handle_t led_strip;
-
-	/* LED strip initialization with the GPIO and pixels number*/
-	led_strip_config_t strip_config = {
-		.strip_gpio_num = BLINK_GPIO,			  // The GPIO that connected to the LED strip's data line
-		.max_leds = 1,							  // The number of LEDs in the strip,
-		.led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
-		.led_model = LED_MODEL_WS2812,			  // LED strip model
-		.flags.invert_out = false,				  // whether to invert the output signal (useful when your hardware has a level inverter)
-	};
-
-	led_strip_rmt_config_t rmt_config = {
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
-		.rmt_channel = 0,
-#else
-		.clk_src = RMT_CLK_SRC_DEFAULT,	   // different clock source can lead to different power consumption
-		.resolution_hz = 10 * 1000 * 1000, // 10MHz
-		.flags.with_dma = false,		   // whether to enable the DMA feature
-#endif
-	};
-	ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
 }
 
 void UI::ProcessUIEvent(UIEvent aEvent, UIEventData *aEventData)
@@ -135,9 +101,41 @@ void UI::ProcessUIEvent(UIEvent aEvent, UIEventData *aEventData)
 
 void UI::Start()
 {
+	
 	ESP_ERROR_CHECK(esp_event_handler_instance_register_with(*myUIEventLoop, UI_QUEUE_EVENT, ESP_EVENT_ANY_ID, ProcessUIEventLoopIteration, myRef, nullptr));
-	BaseType_t result = xTaskCreatePinnedToCore(ProcessUIEventLoopTask, "UIQueueUpdate", 2048, myRef, 1, NULL, 0);
+	BaseType_t result = xTaskCreatePinnedToCore(ProcessUIEventLoopTask, "UIQueueUpdate", 2048*2, myRef, 1, NULL, 0);
 	ASSERT_MSG(result == pdPASS, "Could not start UI event loop task, error: %d", result);
 	
 	myScreen->Start();
+	
+	ESP_LOGI("UI", "UI init complete");
+}
+
+led_strip_handle_t UI::configureLed(gpio_num_t anLedPin)
+{
+	// LED strip general initialization, according to your led board design
+	led_strip_config_t strip_config = {
+		.strip_gpio_num = anLedPin,				  // The GPIO that connected to the LED strip's data line
+		.max_leds = 1,							  // The number of LEDs in the strip,
+		.led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
+		.led_model = LED_MODEL_WS2812,			  // LED strip model
+		.flags = {.invert_out = false}			  // whether to invert the output signal
+	};
+
+	// LED strip backend configuration: RMT
+	led_strip_rmt_config_t rmt_config = {
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
+		.rmt_channel = 0,
+#else
+		.clk_src = RMT_CLK_SRC_DEFAULT,		   // different clock source can lead to different power consumption
+		.resolution_hz = LED_STRIP_RMT_RES_HZ, // RMT counter clock frequency
+		.flags.with_dma = false,			   // DMA feature is available on ESP target like ESP32-S3
+#endif
+	};
+
+	// LED Strip object handle
+	led_strip_handle_t led_strip;
+	ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
+	ESP_LOGI("LED", "Created LED strip object with RMT backend");
+	return led_strip;
 }

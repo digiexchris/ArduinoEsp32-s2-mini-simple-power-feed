@@ -63,6 +63,7 @@ void setup() {
 	mySpeedUpdateHandler->Start();
 	Debouncer::Start();
 	myUI->Start();
+	myEncoder->begin();
   
 	ESP_LOGI("main.cpp", "tasks started");
 	
