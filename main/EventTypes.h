@@ -1,13 +1,17 @@
 #pragma once
 
 #include "esp_event.h"
+#include <memory>
+
+static std::shared_ptr<esp_event_loop_handle_t> myEventLoop;
 
 ESP_EVENT_DECLARE_BASE(STATE_MACHINE_EVENT);
 ESP_EVENT_DECLARE_BASE(UI_QUEUE_EVENT);
+ESP_EVENT_DECLARE_BASE(SETTINGS_EVENT);
 
 enum class Event
 {
-	LeftPressed,
+	LeftPressed = 1,
 	LeftReleased,
 	RightPressed,
 	RightReleased,
@@ -15,20 +19,12 @@ enum class Event
 	RapidReleased,
 	UpdateNormalSpeed,
 	UpdateRapidSpeed,
-	SetStopped
-};
-
-enum class UIEvent
-{
-	MoveLeft,
-	MoveRight,
-	RapidSpeed,
-	NormalSpeed,
+	SetStopped,
+	ToggleUnits,
+	SetEncoderOffset,
 	SetSpeed,
-	Stopping,
-	Stopped
+	UpdateSettings
 };
-
 
 
 class EventData
@@ -46,6 +42,16 @@ class UIEventData : public EventData
 		mySpeed = aSpeed;
 	}
 	uint32_t mySpeed;
+};
+
+class UISetEncoderOffsetEventData : public EventData
+{
+  public:
+	UISetEncoderOffsetEventData(int32_t aOffset = 0)
+	{
+		myEncoderOffset = aOffset;
+	}
+	int32_t myEncoderOffset;
 };
 
 class UpdateSpeedEventData : public EventData

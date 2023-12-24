@@ -37,7 +37,7 @@ void Stepper::Init(uint8_t dirPin, uint8_t enablePin, uint8_t stepPin, uint16_t 
     myStepper.config(&myStepperCfg);
     myStepper.init();
     #elif USE_FASTACCELSTEPPER
-    myEngine.init();
+    myEngine.init(1);
     myStepper = myEngine.stepperConnectToPin(stepPin);
     myRapidSpeed = rapidSpeed;
     if (myStepper) {

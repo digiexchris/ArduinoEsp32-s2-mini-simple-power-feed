@@ -20,9 +20,18 @@ idf_component_register(
 		Event.cpp
 		Screen.cpp
 		Encoder.cpp
+		Settings.cpp
 	INCLUDE_DIRS .
 	REQUIRED_IDF_TARGETS esp32s3
-	REQUIRES esp_event FastAccelStepper arduino driver u8g2 u8g2-hal-esp-idf rmt-ws2812 rotary_encoder) #FastAccelStepper arduino)
+	REQUIRES
+		esp_event
+		FastAccelStepper
+		arduino
+		driver
+		u8g2
+		u8g2-hal-esp-idf
+		rmt-ws2812
+		rotary_encoder) #FastAccelStepper arduino)
 		component_compile_options(-Wno-error=format= -Wno-format)
 
 endif()

@@ -132,7 +132,7 @@ void StateMachine::CheckIfStoppedTask(void* params) {
 }
 
 void StateMachine::CreateStoppingTask() {
-	xTaskCreatePinnedToCore(CheckIfStoppedTask, "processing-stopped", 24000, this, 1, nullptr, 0);
+	xTaskCreatePinnedToCore(CheckIfStoppedTask, "processing-stopped", 24000, this, 11, nullptr, 1);
 }
 
 void StateMachine::StopLeftAction() {
@@ -157,9 +157,11 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
             //ESP_LOGI("state.cpp", "State is stopped");
             if (event == Event::LeftPressed) {
                 MoveLeftAction();
+				esp_event_post_to(*myUiEventLoop, UI_QUEUE_EVENT, static_cast<int32_t>(UIEvent::MoveLeft), nullptr, sizeof(nullptr), pdMS_TO_TICKS(250));
 				return true;
 			} else if (event == Event::RightPressed) {
                 MoveRightAction();
+				esp_event_post_to(*myUiEventLoop, UI_QUEUE_EVENT, static_cast<int32_t>(UIEvent::MoveRight), nullptr, sizeof(nullptr), pdMS_TO_TICKS(250));
 				return true;
             }
             break;
@@ -167,13 +169,15 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
         case State::MovingLeft:
             if (event == Event::LeftReleased) {
                 StopLeftAction();
+				esp_event_post_to(*myUiEventLoop, UI_QUEUE_EVENT, static_cast<int32_t>(UIEvent::Stopping), nullptr, sizeof(nullptr), pdMS_TO_TICKS(250));
 				return true;
             } 
             break;
 
         case State::MovingRight:
             if (event == Event::RightReleased) {
-                StopRightAction();
+				StopRightAction();
+				esp_event_post_to(*myUiEventLoop, UI_QUEUE_EVENT, static_cast<int32_t>(UIEvent::Stopping), nullptr, sizeof(nullptr), pdMS_TO_TICKS(250));
 				return true;
             } 
             break;
@@ -184,16 +188,18 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
 			if (event == Event::LeftPressed)
 			{
 				MoveLeftAction();
+				esp_event_post_to(*myUiEventLoop, UI_QUEUE_EVENT, static_cast<int32_t>(UIEvent::MoveLeft), nullptr, sizeof(nullptr), pdMS_TO_TICKS(250));
 				return true;
 			}
 			else if (event == Event::RightPressed)
 			{
-				// Requeue, gotta wait till we're stopped first.
+				// ignore, gotta wait till we're stopped first.
 				return false;
 			}
 			else if (event == Event::SetStopped)
 			{
 				currentState = State::Stopped;
+				esp_event_post_to(*myUiEventLoop, UI_QUEUE_EVENT, static_cast<int32_t>(UIEvent::Stopped), nullptr, sizeof(nullptr), pdMS_TO_TICKS(250));
 				ESP_LOGI("state.cpp", "Stopped");
 			} 
 			break;
@@ -201,14 +207,16 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
 		case State::StoppingRight:
             if (event == Event::RightPressed) {
                 MoveRightAction();
+				esp_event_post_to(*myUiEventLoop, UI_QUEUE_EVENT, static_cast<int32_t>(UIEvent::MoveRight), nullptr, sizeof(nullptr), pdMS_TO_TICKS(250));
             } 
             else if (event == Event::LeftPressed) {
-                //Requeue, gotta wait till we're stopped first.
+                //Ignore, gotta wait till we're stopped first.
 				return false;
 			}
 			else if (event == Event::SetStopped)
 			{
 				currentState = State::Stopped;
+				esp_event_post_to(*myUiEventLoop, UI_QUEUE_EVENT, static_cast<int32_t>(UIEvent::Stopped), nullptr, sizeof(nullptr), pdMS_TO_TICKS(250));
 				ESP_LOGI("state.cpp", "Stopped");
 			}
             break; 
@@ -220,9 +228,11 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
     switch(event) {
         case Event::RapidPressed:
 			RapidSpeedAction();
+			esp_event_post_to(*myUiEventLoop, UI_QUEUE_EVENT, static_cast<int32_t>(UIEvent::RapidSpeed), nullptr, sizeof(nullptr), pdMS_TO_TICKS(250));
 			break;
 		case Event::RapidReleased:
 			NormalSpeedAction();
+			esp_event_post_to(*myUiEventLoop, UI_QUEUE_EVENT, static_cast<int32_t>(UIEvent::NormalSpeed), nullptr, sizeof(nullptr), pdMS_TO_TICKS(250));
 			break;
 		case Event::UpdateRapidSpeed: 
 		{

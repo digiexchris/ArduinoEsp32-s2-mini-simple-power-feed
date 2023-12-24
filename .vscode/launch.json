@@ -18,7 +18,7 @@
             "gdbpath": "C:\\Espressif4.4.6\\tools\\xtensa-esp32s3-elf\\esp-2021r2-patch5-8.4.0\\xtensa-esp32s3-elf\\bin\\xtensa-esp32s3-elf-gdb.exe",
             "autorun": [
             "set remotetimeout 60",
-            "target remote :3333",
+            "target extended-remote :3333",
             "mon reset halt",
             "flushregs",
             "thb main",

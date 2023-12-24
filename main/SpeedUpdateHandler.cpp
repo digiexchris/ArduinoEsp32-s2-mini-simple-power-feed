@@ -62,7 +62,7 @@ void SpeedUpdateHandler::UpdateSpeeds() {
 
         try {
 			uint32_t adc_reading = 0;
-			for (int i = 0; i < 10; i++)
+			for (int i = 0; i < 20; i++)
 			{
 				adc_reading += adc1_get_raw(speedPin);
 				if (adc_reading == 0)
@@ -91,21 +91,25 @@ void SpeedUpdateHandler::UpdateSpeeds() {
 
 		uint32_t setSpeed = rapidSpeedADC.load(std::memory_order_relaxed);
 
-        uint32_t lowBound = 0;
-        if(setSpeed > 5) {
-			lowBound = setSpeed > 5 ? setSpeed - 5 : setSpeed;
+		uint32_t setSpeedScaled = mapValueToRange(setSpeed, 0, 3073, 0, myMaxDriverFreq);
+		
+		uint32_t scaledAvg = mapValueToRange(AVERAGED, 0, 3073, 0, myMaxDriverFreq);
+
+		uint32_t lowBound = 0;
+		if (setSpeedScaled > 4) {
+			lowBound = setSpeedScaled > 4 ? setSpeedScaled - 4 : setSpeedScaled;
         }
 
-        uint32_t highBound = MAX_DRIVER_STEPS_PER_SECOND;
-        if(setSpeed < (MAX_DRIVER_STEPS_PER_SECOND - 5)) {
-			highBound = setSpeed < (MAX_DRIVER_STEPS_PER_SECOND - 5) ? setSpeed + 5 : setSpeed;
+		uint32_t highBound = myMaxDriverFreq;
+		if (setSpeedScaled < (myMaxDriverFreq - 4)) {
+			highBound = setSpeedScaled < (myMaxDriverFreq - 4) ? setSpeedScaled + 4 : setSpeedScaled;
         }
-            
-        if(clamp(AVERAGED, lowBound, highBound) != AVERAGED) {
+
+		if (clamp(scaledAvg, lowBound, highBound) != scaledAvg) {
 
 			rapidSpeedADC.store(AVERAGED, std::memory_order_relaxed);
 
-			UpdateSpeedEventData *eventData = new UpdateSpeedEventData(mapValueToRange(AVERAGED, 0, 3073, 0, myMaxDriverFreq));
+			UpdateSpeedEventData *eventData = new UpdateSpeedEventData(scaledAvg);
 
 			ESP_ERROR_CHECK(esp_event_post_to(*myEventLoop, STATE_MACHINE_EVENT, static_cast<int32_t>(Event::UpdateRapidSpeed), eventData, sizeof(UpdateSpeedEventData), portMAX_DELAY));
         }

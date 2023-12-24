@@ -36,15 +36,15 @@ std::shared_ptr<Switch> rightSwitch;
 std::shared_ptr<Switch> rapidSwitch;
 
 void setup() {
-	gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1 | ESP_INTR_FLAG_EDGE | ESP_INTR_FLAG_IRAM);
+	//gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1 | ESP_INTR_FLAG_EDGE | ESP_INTR_FLAG_IRAM);
 	
 	ESP_LOGI("main.cpp", "Setup start");
 	myStepper = std::make_shared<Stepper>();
 	myUI = std::make_shared<UI>(I2C_MASTER_SDA_IO, I2C_MASTER_SCL_IO, I2C_MASTER_NUM, I2C_MASTER_FREQ_HZ, ENCODER_A_PIN, ENCODER_B_PIN, ENCODER_BUTTON_PIN);
-	myStepper->Init(dirPinStepper, enablePinStepper, stepPinStepper, MAX_DRIVER_STEPS_PER_SECOND);
+	myStepper->Init(dirPinStepper, enablePinStepper, stepPinStepper, maxStepsPerSecond);
 	myState = std::make_shared<StateMachine>(myStepper, myUI->GetUiEventLoop());
-	mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState->GetEventLoop(), MAX_DRIVER_STEPS_PER_SECOND);
-	myEncoder = std::make_shared<RotaryEncoder>(ENCODER_A_PIN, ENCODER_B_PIN, ENCODER_BUTTON_PIN, myState->GetEventLoop());
+	mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState->GetEventLoop(), maxStepsPerSecond);
+	myEncoder = std::make_shared<RotaryEncoder>(ENCODER_A_PIN, ENCODER_B_PIN, ENCODER_BUTTON_PIN, myState->GetEventLoop(), maxStepsPerSecond);
 	
 	Debouncer::Create(myState->GetEventLoop());
 	leftSwitch = std::make_shared<Switch>(LEFTPIN, 50, Event::LeftPressed, Event::LeftReleased);
@@ -92,10 +92,10 @@ const char *stateToString(State aState)
 
 extern "C" void app_main()
 {
-  esp_log_level_set("main.cpp",ESP_LOG_ERROR);
-  esp_log_level_set("state.cpp",ESP_LOG_INFO);
-  esp_log_level_set("stepper.cpp",ESP_LOG_ERROR);
-  esp_log_level_set("esp32s3.cpu1", ESP_LOG_INFO);
+//   esp_log_level_set("main.cpp",ESP_LOG_ERROR);
+//   esp_log_level_set("state.cpp",ESP_LOG_INFO);
+//   esp_log_level_set("stepper.cpp",ESP_LOG_ERROR);
+//   esp_log_level_set("esp32s3.cpu1", ESP_LOG_INFO);
   setup();
 
   

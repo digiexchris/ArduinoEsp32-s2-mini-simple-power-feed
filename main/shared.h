@@ -37,3 +37,9 @@ inline uint32_t mapValueToRange(uint16_t value, uint16_t inMin, uint16_t inMax, 
 {
 	return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
 };
+
+enum class SpeedUnit
+{
+	MMPM = 0,
+	IPM
+};

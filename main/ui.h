@@ -19,6 +19,7 @@
 class UI
 {
   public:
+
 	UIState myUIState;
 	
 	UI(gpio_num_t sdaPin, 
@@ -40,10 +41,19 @@ class UI
 
   private:
 	UI *myRef;
-	void HandleButton();
+	void ToggleUnitsButton();
+	void ToggleUnits();
+	static void CheckAndSaveSettingsCallback(void *param);
+	static void ToggleUnitsButtonTask(void *params);
 	led_strip_handle_t configureLed(gpio_num_t anLedPin);
+	void SaveSettings(std::shared_ptr<Settings> aSettings);
+	std::shared_ptr<Settings> LoadSettings();
 	//SpeedEncoder* mySpeedEncoder;
 	std::unique_ptr<Screen> myScreen;
 	std::shared_ptr<esp_event_loop_handle_t> myUIEventLoop;
 	led_strip_handle_t* myLedHandle;
+	gpio_num_t myButtonPin;
+	std::shared_ptr<Settings> mySettings;
+	std::shared_ptr<Settings> myPrevSettings;
+	esp_timer_handle_t myTimer;
 };
