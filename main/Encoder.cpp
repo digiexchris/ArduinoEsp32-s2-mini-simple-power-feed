@@ -79,7 +79,7 @@ int RotaryEncoder::getCount()
 	{
 		UISetEncoderOffsetEventData *evt = new UISetEncoderOffsetEventData(mySavedOffset);
 
-		ESP_ERROR_CHECK(esp_event_post_to(myEventLoop, UI_QUEUE_EVENT, static_cast<int32_t>(UIEvent::SetEncoderOffset), evt, sizeof(UISetEncoderOffsetEventData), portMAX_DELAY));
+		PublishEvent(SETTINGS_EVENT, Event::SetEncoderOffset, evt);
 	}
 
 	return myCount;
@@ -110,6 +110,6 @@ void RotaryEncoder::Update()
 		auto stepsPerSecond = mapValueToRange(myPrevCount, 0, ENCODER_COUNTS_FULL_SCALE, 0, myMaxStepsPerSecond);
 		UpdateSpeedEventData *eventData = new UpdateSpeedEventData(stepsPerSecond);
 
-		ESP_ERROR_CHECK(esp_event_post_to(*myEventLoop, STATE_MACHINE_EVENT, static_cast<int32_t>(Event::UpdateNormalSpeed), eventData, sizeof(UpdateSpeedEventData), portMAX_DELAY));
+		PublishEvent(MACHINE_EVENT, Event::UpdateNormalSpeed, eventData);
 	}
 }

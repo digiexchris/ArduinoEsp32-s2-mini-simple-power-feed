@@ -5,25 +5,34 @@
 
 static std::shared_ptr<esp_event_loop_handle_t> myEventLoop;
 
-ESP_EVENT_DECLARE_BASE(STATE_MACHINE_EVENT);
-ESP_EVENT_DECLARE_BASE(UI_QUEUE_EVENT);
+ESP_EVENT_DECLARE_BASE(COMMAND_EVENT);
 ESP_EVENT_DECLARE_BASE(SETTINGS_EVENT);
+ESP_EVENT_DECLARE_BASE(STATE_TRANSITION_EVENT);
 
 enum class Event
 {
-	LeftPressed = 1,
-	LeftReleased,
-	RightPressed,
-	RightReleased,
-	RapidPressed,
-	RapidReleased,
+	Any = -1,
+	//Commands
+	MoveLeft = 0,
+	StopMoveLeft,
+	MoveRight,
+	StopMoveRight,
+	RapidSpeed,
+	NormalSpeed,
 	UpdateNormalSpeed,
 	UpdateRapidSpeed,
 	SetStopped,
 	ToggleUnits,
+	
+	//Settings
 	SetEncoderOffset,
-	SetSpeed,
-	UpdateSettings
+	UpdateSettings,
+	
+	//States
+	MovingLeft,
+	MovingRight,
+	Stopping,
+	Stopped
 };
 
 
@@ -59,7 +68,7 @@ class UpdateSpeedEventData : public EventData
   public:
 	UpdateSpeedEventData(){};
 	UpdateSpeedEventData(uint32_t aSpeed): mySpeed(aSpeed){};
-	int16_t mySpeed;
+	int32_t mySpeed;
 
 	// Copy constructor
 	UpdateSpeedEventData(const UpdateSpeedEventData &other)

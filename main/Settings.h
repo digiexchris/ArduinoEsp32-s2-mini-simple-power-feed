@@ -7,7 +7,7 @@
 struct SettingsData
 {
 	int32_t myEncoderOffset;
-	SpeedUnit myUnits;
+	SpeedUnit mySpeedUnits;
 };
 
 class Settings : public EventHandler
@@ -16,17 +16,16 @@ class Settings : public EventHandler
 	Settings();
 	
 	std::shared_ptr<SettingsData> Get() { return myData; };
-	std::shared_ptr<esp_event_loop_handle_t> GetEventLoop() { return myEventLoop; }
 
   private:
-	
-	static void RunSettingsQueue(void * param);
+
 	static void UpdateSettingsEventCallback(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
-	void SaveSettingsTimerCallback();
+	void SaveSettingsTimerCallback(void* param);
 	esp_err_t Save();
-	SettingsData Load();
+	esp_err_t Load();
 	std::shared_ptr <SettingsData> myData;
-	
+	std::shared_ptr<SettingsData> mySavedData;
+	esp_timer_handle_t myTimer;
 	
 	//constants
 

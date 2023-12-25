@@ -13,18 +13,12 @@
 #include "esp_event.h"
 #include "ui.h"
 #include "EventTypes.h"
+#include "Event.h"
 
-class StateMachine {
+class StateMachine: public EventHandler, EventPublisher{
 public:
 	StateMachine(std::shared_ptr<Stepper> aStepper, std::shared_ptr<esp_event_loop_handle_t> anUiEventLoop);
 	void Start();
-
-	State GetState() { return currentState; }
-	//RingbufHandle_t GetEventRingBuf() { return myEventLoop; }
-	std::shared_ptr<esp_event_loop_handle_t> GetEventLoop() { return myEventLoop; }
-	
-	//RingbufHandle_t GetUpdateSpeedQueue() { return myUpdateSpeedEventLoop; }
-
 private:
     void MoveLeftAction();
     void MoveRightAction();
@@ -37,21 +31,14 @@ private:
 
 	void CreateStoppingTask();
 
-	static void EventLoopRunnerTask(void *args);
-	static void ProcessEventLoopIteration(void *stateMachine, esp_event_base_t base, int32_t id, void *eventData);
-	//static void ProcessUpdateSpeedQueueTask(void *params);
+	static void ProcessEventCallback(void *stateMachine, esp_event_base_t base, int32_t id, void *eventData);
     bool ProcessEvent(Event event, EventData* eventData);
 
     State currentState;
 	UI* myUI;
-	SpeedState currentSpeedState; //TODO probably don't need this, if we can update using debouncer.Changed()
+	SpeedState currentSpeedState;
 	std::shared_ptr<Stepper> myStepper;
-    TaskHandle_t myProcessQueueTaskHandle;
-	std::shared_ptr<esp_event_loop_handle_t> myEventLoop;
-	std::shared_ptr <esp_event_loop_handle_t> myUiEventLoop;
-	TaskHandle_t myEventLoopTaskHandle;
 	StateMachine* myRef;
-	//esp_event_loop_handle_t myUpdateSpeedEventLoop;
 };
 
 #endif // STATE_H

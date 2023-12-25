@@ -4,8 +4,9 @@
 #include <memory>
 
 #include <rotary_encoder.h>
+#include "Event.h"
 
-class RotaryEncoder {
+class RotaryEncoder : public EventPublisher {
 public:
   RotaryEncoder(gpio_num_t anAPin,
 				gpio_num_t aBPin,

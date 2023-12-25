@@ -10,8 +10,9 @@
 #include "StateMachine.h"
 #include "esp_adc_cal.h"
 
-SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, std::shared_ptr<esp_event_loop_handle_t> anEventLoop, uint32_t maxDriverFreq) {
-    speedPin = aSpeedPin;
+SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, std::shared_ptr<esp_event_loop_handle_t> anEventLoop, uint32_t maxDriverFreq)
+	: EventPublisher() {
+	speedPin = aSpeedPin;
     myMaxDriverFreq = maxDriverFreq;
 	rapidSpeedADC = 0;
 	myEventLoop = anEventLoop;
@@ -46,14 +47,7 @@ uint32_t SpeedUpdateHandler::GetRapidSpeed() {
 	return rapidSpeedADC;
 }
 
-//#include "esp_heap_caps.h"
-//#include "esp_heap_trace.h"
-//#define NUM_RECORDS 100
-//static heap_trace_record_t trace_record[NUM_RECORDS]; // This buffer must be in internal RAM
-
 void SpeedUpdateHandler::UpdateSpeeds() {
-	//heap_trace_init_standalone(trace_record, NUM_RECORDS);
-	//ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
 	while (true)
 	{
@@ -111,7 +105,7 @@ void SpeedUpdateHandler::UpdateSpeeds() {
 
 			UpdateSpeedEventData *eventData = new UpdateSpeedEventData(scaledAvg);
 
-			ESP_ERROR_CHECK(esp_event_post_to(*myEventLoop, STATE_MACHINE_EVENT, static_cast<int32_t>(Event::UpdateRapidSpeed), eventData, sizeof(UpdateSpeedEventData), portMAX_DELAY));
+			PublishEvent(MACHINE_EVENT, Event::UpdateRapidSpeed, eventData);
         }
 
 		//heap_trace_stop();

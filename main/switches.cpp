@@ -4,7 +4,6 @@
 #include "esp_event.h"
 #include <memory>
 
-std::shared_ptr<esp_event_loop_handle_t> Debouncer::myEventLoop;
 std::vector<std::shared_ptr<Switch>> Debouncer::mySwitches;
 
 Switch::Switch(gpio_num_t aSwitchPin, uint16_t aDelay, Event aPressedEvent, Event aReleasedEvent)
@@ -77,7 +76,7 @@ void Debouncer::DebounceTask(void *arg)
                     aSwitch->myHasPendingStateChange = false;
                     Event event = currentLevel ? aSwitch->mySwitchPressedEvent : aSwitch->mySwitchReleasedEvent;
 
-                    ESP_ERROR_CHECK(esp_event_post_to(*myEventLoop, STATE_MACHINE_EVENT, static_cast<int32_t>(event), nullptr, sizeof(nullptr), portMAX_DELAY));
+                    ESP_ERROR_CHECK(PublishEvent(STATE_MACHINE_EVENT, static_cast<int32_t>(event), nullptr);
                 }
             }
         }

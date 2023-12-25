@@ -22,7 +22,16 @@ Settings::Settings() : EventHandler(SETTINGS_EVENT)
 	// Load settings from NVS
 	Load();
 
-	ESP_ERROR_CHECK(esp_event_handler_instance_register(SETTINGS_EVENT, (int32_t)Event::UpdateSettings, &UpdateSettingsEventCallback, this, NULL));
+	ESP_ERROR_CHECK(esp_event_handler_instance_register(SETTINGS_EVENT, (int32_t)Event::SetEncoderOffset, &UpdateSettingsEventCallback, this, NULL));
+
+	const esp_timer_create_args_t timer_args = {
+		.callback = &SaveSettingsTimerCallback,
+		/* argument specified here will be passed to timer callback function */
+		.arg = this,
+		.name = "SaveSettings60S"};
+
+	esp_timer_create(&timer_args, &myTimer);
+	esp_timer_start_periodic(myTimer, 60000000);
 }
 
 esp_err_t Settings::Save()
@@ -64,35 +73,58 @@ esp_err_t Settings::Save()
 	return ESP_OK;
 }
 
-SettingsData Settings::Load()
+esp_err_t Settings::Load()
 {
 	// Open NVS handle
 	nvs_handle_t my_handle;
 	esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &my_handle);
 	if (err != ESP_OK)
 	{
-		return err;
+		return -1;
 	}
 
 	// Read the encoder offset from NVS
-	err = nvs_get_i32(my_handle, ENCODER_OFFSET_KEY, &myData.myEncoderOffset);
+	err = nvs_get_i32(my_handle, ENCODER_OFFSET_KEY, &myData->myEncoderOffset);
 	if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND)
 	{
-		nvs_close(my_handle);
-		return err;
+//		nvs_close(my_handle);
+//		return myData;
 	}
 
 	// Read the units from NVS
 	uint8_t units;
-	err = nvs_get_u8(my_handle, UNITS_KEY, &units);
+	err = nvs_get_u8(my_handle, SPEED_UNITS_KEY, &(uint8_t)myData->myUnits);
 	if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND)
 	{
-		nvs_close(my_handle);
-		return err;
+//		nvs_close(my_handle);
+//		return myData;
 	}
-	myData.myUnits = static_cast<SpeedUnit>(units);
 
 	// Close NVS handle
 	nvs_close(my_handle);
 	return ESP_OK;
+}
+
+void Settings::SaveSettingsTimerCallback(void* param)
+{
+	bool changed = false;
+	Settings *settings = (Settings *)param;
+	int32_t offset = settings->myData->myEncoderOffset;
+	if (settings->mySavedData->myEncoderOffset != offset)
+	{
+		settings->mySavedData->myEncoderOffset = offset;
+		changed = true;
+	}
+
+	SpeedUnit units = settings->myData->myUnits;
+	if (settings->mySavedData->myUnits != units)
+	{
+		settings->mySavedData->myUnits = units;
+		changed = true;
+	}
+
+	if (changed)
+	{
+		settings->Save();
+	}
 }
