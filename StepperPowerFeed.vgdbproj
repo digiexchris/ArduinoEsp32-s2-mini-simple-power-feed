@@ -49,9 +49,10 @@
     <ExportCompileCommands>false</ExportCompileCommands>
     <DisableToolchainFile>false</DisableToolchainFile>
     <CMakeMakefileType>Ninja</CMakeMakefileType>
+    <ExistingToolchainFile>C:\Espressif4.4.6\frameworks\esp-idf\tools\tools.json</ExistingToolchainFile>
     <DeployAsRoot>false</DeployAsRoot>
     <CMakeCleanMode>RemoveBuildDirectory</CMakeCleanMode>
-    <UseCCache>false</UseCCache>
+    <UseCCache>true</UseCCache>
     <ProjectModeSettings>
       <ProjectItemSettings>
         <GroupSourcesByTypes>true</GroupSourcesByTypes>
@@ -61,7 +62,7 @@
         <AutoRefreshProject>true</AutoRefreshProject>
         <AlwaysConsiderOutdated>false</AlwaysConsiderOutdated>
         <SortTargetsByName>true</SortTargetsByName>
-        <RedundantTargetMode>HideOuterProjectTargets</RedundantTargetMode>
+        <RedundantTargetMode>DoNotHide</RedundantTargetMode>
         <SortSourcesByName>true</SortSourcesByName>
         <BuildAllTargetsInSubdir>false</BuildAllTargetsInSubdir>
         <FoldSingleItemPathLevels>true</FoldSingleItemPathLevels>
@@ -106,7 +107,7 @@
   <UserDefinedVariables />
   <ImportedPropertySheets />
   <CodeSense>
-    <Enabled>True</Enabled>
+    <Enabled>Unknown</Enabled>
     <ExtraSettings>
       <HideErrorsInSystemHeaders>true</HideErrorsInSystemHeaders>
       <SupportLightweightReferenceAnalysis>true</SupportLightweightReferenceAnalysis>
@@ -115,12 +116,15 @@
         <SearchInProjectDir>true</SearchInProjectDir>
         <SearchInSourceDirs>true</SearchInSourceDirs>
         <SearchInIncludeSubdirs>true</SearchInIncludeSubdirs>
+        <ExtraSearchDirs>
+          <string>lib\espp\components</string>
+        </ExtraSearchDirs>
       </DiscoverySettings>
       <CheckForClangFormatFiles>true</CheckForClangFormatFiles>
-      <FormattingEngine xsi:nil="true" />
+      <FormattingEngine>ClangFormat</FormattingEngine>
     </ExtraSettings>
     <CodeAnalyzerSettings>
-      <Enabled>true</Enabled>
+      <Enabled>false</Enabled>
       <SelectedAnalyzers>
         <string>apiModeling.Errno</string>
         <string>apiModeling.google.GTest</string>

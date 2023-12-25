@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <esp_log.h>
 
+#include "ui.h"
+
 Stepper::Stepper() {
     myUseRapidSpeed = false;
     myRapidSpeed = 0;
@@ -35,7 +37,7 @@ void Stepper::Init(uint8_t dirPin, uint8_t enablePin, uint8_t stepPin, uint16_t 
     myStepper.config(&myStepperCfg);
     myStepper.init();
     #elif USE_FASTACCELSTEPPER
-    myEngine.init();
+    myEngine.init(1);
     myStepper = myEngine.stepperConnectToPin(stepPin);
     myRapidSpeed = rapidSpeed;
     if (myStepper) {
@@ -103,15 +105,21 @@ void Stepper::UpdateActiveSpeed() {
 //    const bool isRunning = myStepper->isRunning();
 //    if(aSpeed != 0 && (curSpeed <= aSpeed - (aSpeed*0.05) || curSpeed >= aSpeed + (aSpeed*0.05))) {
 //        ESP_LOGI("Stepper", "Speed is not within 0.5%% of target speed, updating");
-    ESP_ERROR_CHECK(myStepper->setSpeedInHz(targetSpeed));
+    myStepper->setSpeedInHz(targetSpeed);
     myStepper->applySpeedAcceleration();
 #endif
 }
 
-void Stepper::UpdateSpeeds(uint16_t aNormalSpeed, uint16_t aRapidSpeed) {
-    myNormalSpeed = aNormalSpeed;
+void Stepper::UpdateRapidSpeed(uint16_t aRapidSpeed) {
     myRapidSpeed = aRapidSpeed;
     UpdateActiveSpeed();
+}
+
+void Stepper::UpdateNormalSpeed(uint16_t aNormalSpeed)
+{
+	//cap it at the rapid speed
+	myNormalSpeed = aNormalSpeed <= myRapidSpeed? aNormalSpeed : myRapidSpeed;
+	UpdateActiveSpeed();
 }
 
 void Stepper::MoveLeft() {

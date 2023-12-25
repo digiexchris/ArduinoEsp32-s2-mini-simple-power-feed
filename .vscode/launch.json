@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "ESP-IDF Debug: Launch",
+            "type": "espidf",
+            "request": "launch"
+        },
+        {
+            "type": "gdb",
+            "request": "launch",
+            "name": "OpenOCD Launch gdb",
+            "target": "${workspaceRoot}/build/StepperPowerFeed.elf",
+            "cwd": "${workspaceRoot}",
+            "gdbpath": "C:\\Espressif4.4.6\\tools\\xtensa-esp32s3-elf\\esp-2021r2-patch5-8.4.0\\xtensa-esp32s3-elf\\bin\\xtensa-esp32s3-elf-gdb.exe",
+            "autorun": [
+            "set remotetimeout 60",
+            "target extended-remote :3333",
+            "mon reset halt",
+            "flushregs",
+            "thb main",
+            "c",
+            ],
+          },
+          {
+              "type": "gdb",
+              "request": "launch",
+              "name": "2 OpenOCD Launch gdb",
+              "target": "${workspaceRoot}/build/StepperPowerFeed.elf",
+              "cwd": "${workspaceRoot}",
+              "gdbpath": "C:\\Espressif4.4.6\\tools\\xtensa-esp32s3-elf\\esp-2021r2-patch5-8.4.0\\xtensa-esp32s3-elf\\bin\\xtensa-esp32s3-elf-gdb.exe",
+              "autorun": [
+              "set remotetimeout 60",
+              "target remote | C:\\Espressif4.4.6\\tools\\openocd-esp32\\v0.12.0-esp32-20230419\\openocd-esp32\bin\\openocd.exe -c \"gdb_port pipe; log_output openocd.log\" --search C:\\Espressif4.4.6\tools\\openocd-esp32\\v0.12.0-esp32-20230419\\openocd-esp32\\share\\openocd\\scripts -f board/esp32s3-builtin.cfg -c \"debug_level 2;init\"",
+              "mon reset halt",
+              "flushregs",
+              "thb main",
+              "c",
+              ],
+            }
+    ]
+}

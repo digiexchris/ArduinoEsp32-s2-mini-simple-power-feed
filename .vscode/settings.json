@@ -1,11 +1,20 @@
 {
-    "idf.adapterTargetName": "esp32",
-    "idf.gitPathWin": "c:\\Espressif4.4.6\\tools\\idf-git\\2.39.2\\cmd\\git.exe",
-    "idf.espIdfPathWin": "c:\\Espressif4.4.6\\esp-idf",
+    "idf.adapterTargetName": "esp32s3",
+    "idf.espIdfPathWin": "c:\\Espressif4.4.6\\frameworks\\esp-idf",
     "idf.pythonBinPathWin": "c:\\Espressif4.4.6\\python_env\\idf4.4_py3.8_env\\Scripts\\python.exe",
     "idf.toolsPathWin": "c:\\Espressif4.4.6\\",
-    "idf.customExtraPaths": "c:\\Espressif4.4.6\\tools\\xtensa-esp32-elf\\esp32-2019r1-8.2.0\\xtensa-esp32-elf\\bin;c:\\Espressif4.4.6\\tools\\xtensa-esp32s2-elf\\esp32s2-dev-4-g3a626e93-8.2.0\\xtensa-esp32s2-elf\\bin;c:\\Espressif4.4.6\\tools\\esp32ulp-elf\\2.28.51.20170517\\esp32ulp-elf-binutils\\bin;c:\\Espressif4.4.6\\tools\\cmake\\3.13.4\\bin;c:\\Espressif4.4.6\\tools\\openocd-esp32\\v0.10.0-esp32-20190708\\openocd-esp32\\bin;c:\\Espressif4.4.6\\tools\\ninja\\1.9.0;c:\\Espressif4.4.6\\tools\\idf-exe\\1.0.1;c:\\Espressif4.4.6\\tools\\ccache\\3.7",
+    "idf.customExtraPaths": "c:\\Espressif4.4.6\\tools\\xtensa-esp-elf-gdb\\11.2_20220823\\xtensa-esp-elf-gdb\\bin;c:\\Espressif4.4.6\\tools\\riscv32-esp-elf-gdb\\11.2_20220823\\riscv32-esp-elf-gdb\\bin;c:\\Espressif4.4.6\\tools\\xtensa-esp32-elf\\esp-2021r2-patch5-8.4.0\\xtensa-esp32-elf\\bin;c:\\Espressif4.4.6\\tools\\xtensa-esp32s2-elf\\esp-2021r2-patch5-8.4.0\\xtensa-esp32s2-elf\\bin;c:\\Espressif4.4.6\\tools\\xtensa-esp32s3-elf\\esp-2021r2-patch5-8.4.0\\xtensa-esp32s3-elf\\bin;c:\\Espressif4.4.6\\tools\\riscv32-esp-elf\\esp-2021r2-patch5-8.4.0\\riscv32-esp-elf\\bin;c:\\Espressif4.4.6\\tools\\esp32ulp-elf\\2.35_20220830\\esp32ulp-elf\\bin;c:\\Espressif4.4.6\\tools\\cmake\\3.23.1\\bin;c:\\Espressif4.4.6\\tools\\openocd-esp32\\v0.12.0-esp32-20230419\\openocd-esp32\\bin;c:\\Espressif4.4.6\\tools\\ninja\\1.10.2;c:\\Espressif4.4.6\\tools\\idf-exe\\1.0.3;c:\\Espressif4.4.6\\tools\\ccache\\4.3\\ccache-4.3-windows-64;c:\\Espressif4.4.6\\tools\\dfu-util\\0.9\\dfu-util-0.9-win64",
     "idf.customExtraVars": {
-        "OPENOCD_SCRIPTS": "c:\\Espressif4.4.6\\tools\\openocd-esp32\\v0.10.0-esp32-20190708/openocd-esp32/share/openocd/scripts"
-    }
+        "OPENOCD_SCRIPTS": "c:\\Espressif4.4.6\\tools\\openocd-esp32\\v0.12.0-esp32-20230419/openocd-esp32/share/openocd/scripts",
+        "IDF_CCACHE_ENABLE": "1"
+    },
+    "idf.gitPathWin": "c:\\Espressif4.4.6\\tools\\idf-git\\2.39.2\\cmd\\git.exe",
+    "files.associations": {
+        "cstdint": "cpp"
+    },
+    "idf.portWin": "COM12",
+    "idf.openOcdConfigs": [
+        "board/esp32s3-builtin.cfg"
+    ],
+    "idf.flashType": "JTAG"
 }

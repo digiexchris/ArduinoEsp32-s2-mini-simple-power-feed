@@ -7,6 +7,7 @@
 
 #include <memory>
 #include "state.h"
+#include "StateMachine.h"
 #include <esp_log.h>
 #include <vector>
 #include <freertos/ringbuf.h>
@@ -40,14 +41,14 @@ struct Switch
 class Debouncer
 {
   public:
-	static void Create(esp_event_loop_handle_t anEventLoop);
+	static void Create(std::shared_ptr<esp_event_loop_handle_t> anEventLoop);
 
 	static void AddSwitch(SwitchName aName, std::shared_ptr<Switch> aSwitch);
 
 	static void Start();
 
   private:
-	static esp_event_loop_handle_t myEventLoop;
+	static std::shared_ptr<esp_event_loop_handle_t> myEventLoop;
 	
 	static std::vector<std::shared_ptr<Switch>> mySwitches;
 

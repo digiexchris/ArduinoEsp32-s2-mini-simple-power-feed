@@ -19,7 +19,8 @@ public:
     };
     Stepper();
     void Init(uint8_t dirPin, uint8_t enablePin, uint8_t stepPin, uint16_t rapidSpeed);
-    void UpdateSpeeds(uint16_t aNormalSpeed, uint16_t aRapidSpeed);
+	void UpdateNormalSpeed(uint16_t aNormalSpeed);
+	void UpdateRapidSpeed(uint16_t aRapidSpeed);
     void MoveLeft();
     void MoveRight();
     void Stop();
@@ -37,6 +38,18 @@ public:
 #elif USE_FASTACCELSTEPPER
 	uint16_t GetCurrentSpeed() {
 		return myStepper->getCurrentSpeedInMilliHz()/1000;
+	}
+#endif
+
+#ifdef USE_DENDO_STEPPER
+	uint16_t GetTargetSpeed()
+	{
+		return myStepper.getTargetSpeed();
+	}
+#elif USE_FASTACCELSTEPPER
+	uint16_t GetTargetSpeed()
+	{
+		return myStepper->getSpeedInMilliHz() / 1000;
 	}
 #endif
 
