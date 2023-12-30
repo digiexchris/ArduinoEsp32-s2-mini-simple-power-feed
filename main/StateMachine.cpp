@@ -6,10 +6,10 @@
 #include "shared.h"
 #include <esp_event_base.h>
 #include <esp_event.h>
+#include "StateMachine.h"
+#include "EventTypes.h"
 
-ESP_EVENT_DEFINE_BASE(COMMAND_EVENT);
-
-StateMachine::StateMachine(std::shared_ptr<Stepper> aStepper, std::shared_ptr<esp_event_loop_handle_t> aUIEventLoop) : currentState(State::Stopped), currentSpeedState(SpeedState::Normal) {
+StateMachine::StateMachine(std::shared_ptr<Stepper> aStepper) : currentState(State::Stopped), currentSpeedState(SpeedState::Normal) {
     myStepper = aStepper;
 	myRef = this;
 	
@@ -70,17 +70,19 @@ void StateMachine::NormalSpeedAction() {
     myStepper->SetNormalSpeed();
 }
 
+State StateMachine::GetState() {
+	return currentState;
+}
+	
 void StateMachine::CheckIfStoppedTask(void* params) {
 	StateMachine* sm = static_cast<StateMachine*>(params);
 	ASSERT_MSG(sm, "CheckIfStoppedTask", "StateMachine was null on start of task");
-	std::shared_ptr<esp_event_loop_handle_t> evht = sm->GetEventLoop();
-	ASSERT_MSG(evht, "CheckIfStoppedTask", "Event ringbuf was null on start of task");
 	bool isStopped = false;
 	while(!isStopped) {
 		vTaskDelay(pdMS_TO_TICKS(10));
 		
 		if(sm->myStepper->IsStopped()) {
-			ESP_ERROR_CHECK(esp_event_post_to(*evht, MACHINE_EVENT, static_cast<int32_t>(Event::SetStopped), nullptr, sizeof(nullptr), pdMS_TO_TICKS(250)));
+			ESP_ERROR_CHECK(sm->PublishEvent(COMMAND_EVENT, Event::SetStopped));
 			isStopped = true;
 			break;
 		}
@@ -112,11 +114,11 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
             //ESP_LOGI("state.cpp", "State is stopped");
             if (event == Event::MoveLeft) {
                 MoveLeftAction();
-				PublishEvent(STATE_TRANSITION_EVENT, Event::MovingLeft, nullptr);
+				PublishEvent(STATE_TRANSITION_EVENT, Event::MovingLeft);
 				return true;
 			} else if (event == Event::MoveRight) {
                 MoveRightAction();
-				PublishEvent(STATE_TRANSITION_EVENT,Event::MovingRight, nullptr);
+				PublishEvent(STATE_TRANSITION_EVENT,Event::MovingRight);
 				return true;
             }
             break;
@@ -124,7 +126,7 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
         case State::MovingLeft:
             if (event == Event::StopMoveLeft) {
                 StopLeftAction();
-				PublishEvent(STATE_TRANSITION_EVENT, Event::Stopping, nullptr);
+				PublishEvent(STATE_TRANSITION_EVENT, Event::Stopping);
 				return true;
             } 
             break;
@@ -132,7 +134,7 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
         case State::MovingRight:
             if (event == Event::StopMoveRight) {
 				StopRightAction();
-				PublishEvent(STATE_TRANSITION_EVENT, Event::Stopping, nullptr);
+				PublishEvent(STATE_TRANSITION_EVENT, Event::Stopping);
 				return true;
             } 
             break;
@@ -143,18 +145,18 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
 			if (event == Event::MoveLeft)
 			{
 				MoveLeftAction();
-				PublishEvent(STATE_TRANSITION_EVENT, Event::MovingLeft, nullptr);
+				PublishEvent(STATE_TRANSITION_EVENT, Event::MovingLeft);
 				return true;
 			}
 			else if (event == Event::MoveRight)
 			{
 				// ignore, gotta wait till we're stopped first.
-				return false;
+				break;
 			}
 			else if (event == Event::SetStopped)
 			{
 				currentState = State::Stopped;
-				PublishEvent(STATE_TRANSITION_EVENT, Event::Stopped, nullptr);
+				PublishEvent(STATE_TRANSITION_EVENT, Event::Stopped);
 				ESP_LOGI("state.cpp", "Stopped");
 			} 
 			break;
@@ -162,16 +164,16 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
 		case State::StoppingRight:
             if (event == Event::MoveRight) {
                 MoveRightAction();
-				PublishEvent(STATE_TRANSITION_EVENT, Event::MovingRight, nullptr);
+				PublishEvent(STATE_TRANSITION_EVENT, Event::MovingRight);
             } 
             else if (event == Event::MoveLeft) {
                 //Ignore, gotta wait till we're stopped first.
-				return false;
+				break;
 			}
 			else if (event == Event::SetStopped)
 			{
 				currentState = State::Stopped;
-				PublishEvent(STATE_TRANSITION_EVENT, Event::Stopped, nullptr);
+				PublishEvent(STATE_TRANSITION_EVENT, Event::Stopped);
 				ESP_LOGI("state.cpp", "Stopped");
 			}
 			break; 
@@ -190,10 +192,10 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
 			break;
 		case Event::UpdateRapidSpeed: 
 		{
-			UpdateSpeedEventData* eventData = dynamic_cast<UpdateSpeedEventData*>(eventPayload);
+			SingleValueEventData<uint32_t> *eventData = dynamic_cast < SingleValueEventData<uint32_t>*>(eventPayload);
 			ASSERT_MSG(eventData, "StateMachine", "Failed to cast event data to UpdateSpeedEventData");
 
-			int16_t speed = eventData->mySpeed;
+			int16_t speed = eventData->myValue;
 			ESP_LOGI("StateMachine", "Updating rapid speed to %d", speed);
 
 			myStepper->UpdateRapidSpeed(speed);
@@ -201,10 +203,10 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
 		}
 		case Event::UpdateNormalSpeed: 
 		{
-			UpdateSpeedEventData *eventData = dynamic_cast<UpdateSpeedEventData *>(eventPayload);
+			SingleValueEventData<uint32_t> *eventData = dynamic_cast<SingleValueEventData<uint32_t> *>(eventPayload);
 			ASSERT_MSG(eventData, "StateMachine", "Failed to cast event data to UpdateSpeedEventData");
 
-			int16_t speed = eventData->mySpeed;
+			uint32_t speed = eventData->myValue;
 			ESP_LOGI("StateMachine", "Updating normal speed to %d", speed);
 
 			myStepper->UpdateNormalSpeed(speed);

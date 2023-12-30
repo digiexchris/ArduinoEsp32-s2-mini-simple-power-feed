@@ -15,10 +15,13 @@
 #include "EventTypes.h"
 #include "Event.h"
 
+
+class UI;
 class StateMachine: public EventHandler, EventPublisher{
 public:
-	StateMachine(std::shared_ptr<Stepper> aStepper, std::shared_ptr<esp_event_loop_handle_t> anUiEventLoop);
+	StateMachine(std::shared_ptr<Stepper> aStepper);
 	void Start();
+	State GetState();
 private:
     void MoveLeftAction();
     void MoveRightAction();

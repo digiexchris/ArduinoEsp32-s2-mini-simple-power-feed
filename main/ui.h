@@ -9,6 +9,9 @@
 #include <led_strip.h>
 #include "Event.h"
 #include "Settings.h"
+#include "state.h"
+
+class Screen;
 
 class UI : public EventPublisher, EventHandler
 {
@@ -23,7 +26,8 @@ class UI : public EventPublisher, EventHandler
 	   gpio_num_t anEncAPin, 
 	   gpio_num_t aEncBPin, 
 	   gpio_num_t aButtonPin,
-	   SettingsData aSettings);
+//	   uint32_t aSavedNormalSpeed,
+	   SpeedUnit aSavedSpeedUnits);
 	void Update();
 	static void UpdateTask(void *pvParameters);
 	void Start();
@@ -32,7 +36,7 @@ class UI : public EventPublisher, EventHandler
 	void ProcessEvent(Event event, EventData* eventData);
 
   private:
-	UI *myRef;
+	static std::shared_ptr<UI> myRef;
 	void ToggleUnitsButton();
 	void ToggleUnits();
 	static void CheckAndSaveSettingsCallback(void *param);
@@ -41,8 +45,8 @@ class UI : public EventPublisher, EventHandler
 	std::unique_ptr<Screen> myScreen;
 	uint32_t myNormalSpeed;
 	uint32_t myRapidSpeed;
+	SpeedUnit mySpeedUnits;
 	bool myIsRapid;
 	led_strip_handle_t* myLedHandle;
 	gpio_num_t myButtonPin;
-	SettingsData mySettings;
 };

@@ -1,4 +1,4 @@
-#include "SpeedUpdateHandler.h"
+#include "RapidPot.h"
 #include <driver/adc.h>
 #include <esp_err.h>
 #include <freertos/FreeRTOS.h>
@@ -10,12 +10,11 @@
 #include "StateMachine.h"
 #include "esp_adc_cal.h"
 
-SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, std::shared_ptr<esp_event_loop_handle_t> anEventLoop, uint32_t maxDriverFreq)
+RapidPot::RapidPot(adc1_channel_t aSpeedPin, uint32_t maxDriverFreq)
 	: EventPublisher() {
 	speedPin = aSpeedPin;
     myMaxDriverFreq = maxDriverFreq;
 	rapidSpeedADC = 0;
-	myEventLoop = anEventLoop;
 	setSpeedADC = 0;
 	myADC1Calibration = new esp_adc_cal_characteristics_t();
 
@@ -34,20 +33,20 @@ SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, std::shared_ptr
     //start the update task
 }
 
-void SpeedUpdateHandler::Start() {
+void RapidPot::Start() {
 	//start the update task
 	xTaskCreatePinnedToCore(&UpdateTask,"update speed", 4048, this, 4, &updateTaskHandle, 0);
 }
 
-uint32_t SpeedUpdateHandler::GetNormalSpeed() {
+uint32_t RapidPot::GetNormalSpeed() {
     return setSpeedADC;
 }
 
-uint32_t SpeedUpdateHandler::GetRapidSpeed() {
+uint32_t RapidPot::GetRapidSpeed() {
 	return rapidSpeedADC;
 }
 
-void SpeedUpdateHandler::UpdateSpeeds() {
+void RapidPot::UpdateSpeeds() {
 
 	while (true)
 	{
@@ -103,9 +102,9 @@ void SpeedUpdateHandler::UpdateSpeeds() {
 
 			rapidSpeedADC.store(AVERAGED, std::memory_order_relaxed);
 
-			UpdateSpeedEventData *eventData = new UpdateSpeedEventData(scaledAvg);
+			SingleValueEventData<uint32_t> *eventData = new SingleValueEventData<uint32_t>(scaledAvg);
 
-			PublishEvent(MACHINE_EVENT, Event::UpdateRapidSpeed, eventData);
+			PublishEvent(COMMAND_EVENT, Event::UpdateRapidSpeed, eventData);
         }
 
 		//heap_trace_stop();
@@ -115,7 +114,7 @@ void SpeedUpdateHandler::UpdateSpeeds() {
     }
 }
 
-void SpeedUpdateHandler::UpdateTask(void* aHandler) {
-    SpeedUpdateHandler* handler = static_cast<SpeedUpdateHandler*>(aHandler);
+void RapidPot::UpdateTask(void* aHandler) {
+    RapidPot* handler = static_cast<RapidPot*>(aHandler);
    handler->UpdateSpeeds();
 }

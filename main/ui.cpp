@@ -12,6 +12,8 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 
+std::shared_ptr<UI> UI::myRef = nullptr;
+
 UI::UI(gpio_num_t sdaPin, 
 	   gpio_num_t sclPin, 
 	   i2c_port_t i2cPort, 
@@ -19,12 +21,17 @@ UI::UI(gpio_num_t sdaPin,
 	   gpio_num_t anEncAPin, 
 	   gpio_num_t aEncBPin, 
 	   gpio_num_t aButtonPin,
-	   SettingData aSettings)
+//	   uint32_t aSavedNormalSpeed,
+	   SpeedUnit aSavedSpeedUnits)
 {
+	myRapidSpeed = 0;
+	mySpeedUnits = aSavedSpeedUnits;
+	
 	myButtonPin = aButtonPin;
 	myUIState = UIState::Stopped;
-	myScreen = std::make_unique<Screen>(sdaPin, sclPin, i2cPort, i2cClkFreq, mySettings);
-	myRef = this;
+	myScreen = std::make_unique<Screen>(sdaPin, sclPin, i2cPort, i2cClkFreq);
+	myRef.reset(this);
+	myIsRapid = false;
 
 	auto led = configureLed(RGB_LED_PIN);
 
@@ -38,23 +45,19 @@ UI::UI(gpio_num_t sdaPin,
 	gpio_set_pull_mode(myButtonPin, GPIO_PULLUP_ONLY);
 	
 	xTaskCreatePinnedToCore(ToggleUnitsButtonTask, "ToggleUnitsButtonTask", 2048*2, this, 1, nullptr, 0);
-	mySettings = aSettings;
 
-	myNormalSpeed = mySettings.someoffsetcalc;
+//	myNormalSpeed = aSavedNormalSpeed;
+
 	ESP_LOGI("UI", "UI constructor complete");
 }
 
 void UI::ProcessEventCallback(void *aUi, esp_event_base_t base, int32_t id, void *payload)
 {
-	UI *ui = (UI *)aUi;
-
-	ASSERT_MSG(ui, "ProcessEventLoopIteration", "UI was null on start of task");
-
 	Event event = static_cast<Event>(id);
 
 	EventData *eventData = static_cast<EventData*>(payload);
 
-	ui->ProcessEvent(event, eventData);
+	myRef->ProcessEvent(event, eventData);
 }
 
 void UI::ProcessEvent(Event aEvent, EventData *aEventData)
@@ -88,8 +91,8 @@ void UI::ProcessEvent(Event aEvent, EventData *aEventData)
 		break;
 	case Event::UpdateNormalSpeed: 
 		{
-			UpdateSpeedEventData* evt = (UpdateSpeedEventData*)aEventData;
-			myNormalSpeed = evt->mySpeed;
+		SingleValueEventData<uint32_t> *evt = (SingleValueEventData<uint32_t>*)aEventData;
+			myNormalSpeed = evt->myValue;
 			if (!myIsRapid)
 			{
 				myScreen->SetSpeed(myNormalSpeed);
@@ -98,11 +101,11 @@ void UI::ProcessEvent(Event aEvent, EventData *aEventData)
 		break;
 	case Event::UpdateRapidSpeed:
 		{
-			UpdateSpeedEventData* evt = (UpdateSpeedEventData*)aEventData;
-			myRapidSpeed = evt->mySpeed;
+			SingleValueEventData<uint32_t> *evt = (SingleValueEventData<uint32_t>*)aEventData;
+			myRapidSpeed = evt->myValue;
 			if (myIsRapid)
 			{
-				myScreen->SetSpeed(myNormalSpeed);
+				myScreen->SetSpeed(myRapidSpeed);
 			}
 		}
 		break;
@@ -113,13 +116,18 @@ void UI::ProcessEvent(Event aEvent, EventData *aEventData)
 
 void UI::Start()
 {
-
+	myScreen->Start();
+	
 	RegisterEventHandler(STATE_TRANSITION_EVENT, Event::Any, ProcessEventCallback);
 	RegisterEventHandler(COMMAND_EVENT, Event::RapidSpeed, ProcessEventCallback);
 	RegisterEventHandler(COMMAND_EVENT, Event::NormalSpeed, ProcessEventCallback);
-	
-	myScreen->Start();
-	
+	RegisterEventHandler(COMMAND_EVENT, Event::UpdateNormalSpeed, ProcessEventCallback);
+	RegisterEventHandler(COMMAND_EVENT, Event::UpdateRapidSpeed, ProcessEventCallback);
+	RegisterEventHandler(COMMAND_EVENT, Event::ToggleUnits, ProcessEventCallback);
+
+	myScreen->SetUnit(mySpeedUnits);
+	myScreen->SetSpeed(myNormalSpeed);
+
 	ESP_LOGI("UI", "UI init complete");
 }
 
@@ -194,7 +202,7 @@ void UI::ToggleUnitsButton()
 
                 if (duration.count() >= 1 && !buttonPressedEventSent)
                 {
-                    ESP_ERROR_CHECK( esp_event_post_to(*myEventLoop, UI_QUEUE_EVENT, static_cast<int32_t>(Event::ToggleUnits), nullptr, sizeof(nullptr), portMAX_DELAY));
+                    ESP_ERROR_CHECK(PublishEvent(COMMAND_EVENT,Event::ToggleUnits));
                     buttonPressedEventSent = true;
                 }
             }
@@ -210,14 +218,16 @@ void UI::ToggleUnitsButton()
 
 void UI::ToggleUnits() 
 {
-	if (mySettings.mySpeedUnits == SpeedUnit::MMPM)
+	if (mySpeedUnits == SpeedUnit::MMPM)
 	{
-		mySettings.mySpeedUnits = SpeedUnit::IPM;
+		mySpeedUnits = SpeedUnit::IPM;
 	}
 	else
 	{
-		mySettings.mySpeedUnits = SpeedUnit::MMPM;
+		mySpeedUnits = SpeedUnit::MMPM;
 	}
 
-	myScreen->SetUnit(mySettings.mySpeedUnits);
+	myScreen->SetUnit(mySpeedUnits);
+
+	PublishEvent(SETTINGS_EVENT, Event::SetSpeedUnit, new SingleValueEventData<SpeedUnit>(mySpeedUnits));
 }

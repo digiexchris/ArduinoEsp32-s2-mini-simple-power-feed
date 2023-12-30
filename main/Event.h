@@ -1,6 +1,8 @@
 #pragma once
-#include <esp_event.h>]
+#include <esp_event.h>
 #include "EventTypes.h"
+#include "shared.h"
+#include <typeinfo>
 
 class EventBase
 {
@@ -10,6 +12,7 @@ class EventBase
 		if (!myEventLoopInstalled)
 		{
 			ESP_ERROR_CHECK(esp_event_loop_create_default());
+			myEventLoopInstalled = true;
 		}
 	};
 	static bool myEventLoopInstalled;
@@ -21,12 +24,27 @@ class EventPublisher : public EventBase
 {
   public:
 	EventPublisher() : EventBase()
-	{}
-	virtual ~EventPublisher(){};
-	virtual esp_err_t PublishEvent(esp_event_base_t aBase, Event event, EventData *eventData)
 	{
-		return esp_event_post(aBase, static_cast<int32_t>(event), (void *)eventData, sizeof(EventData), portTICK_PERIOD_MS * 200);
+		//myPublisherName = DemangleTypeName(typeid(*this).name());
 	}
+	virtual ~EventPublisher(){};
+
+	template <typename T>
+	static esp_err_t PublishEvent(esp_event_base_t aBase, Event event, T *eventData)
+	{
+		static_assert(std::is_base_of<EventData, T>::value, "T must be derived from EventData");
+		//EventData *baseEventData = static_cast<EventData *>(eventData);
+
+		//baseEventData->myPublisher = myPublisherName;
+		return esp_event_post(aBase, static_cast<int32_t>(event), (void *)eventData, sizeof(T), portTICK_PERIOD_MS * 200);
+	}
+
+	static esp_err_t PublishEvent(esp_event_base_t aBase, Event event)
+	{
+		return esp_event_post(aBase, static_cast<int32_t>(event), nullptr, sizeof(nullptr), portTICK_PERIOD_MS * 200);
+	}
+  protected:
+	static std::string myPublisherName;
 };
 
 class EventHandler : public EventBase

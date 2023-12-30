@@ -12,7 +12,7 @@ ESP_EVENT_DECLARE_BASE(STATE_TRANSITION_EVENT);
 enum class Event
 {
 	Any = -1,
-	//Commands
+	// Commands
 	MoveLeft = 0,
 	StopMoveLeft,
 	MoveRight,
@@ -23,10 +23,12 @@ enum class Event
 	UpdateRapidSpeed,
 	SetStopped,
 	ToggleUnits,
-	
-	//Settings
+
+	// Settings
 	SetEncoderOffset,
-	UpdateSettings,
+	UpdateEncoderCount,
+	SetSpeedUnit,
+	
 	
 	//States
 	MovingLeft,
@@ -39,18 +41,25 @@ enum class Event
 class EventData
 {
   public:
-	EventData(){};
+	EventData(std::string aPublisher = "EventPublisher")
+	{
+		myPublisher = aPublisher;
+	}
 	virtual ~EventData(){};
+	std::string myPublisher;
+  private:
+	
 };
 
-class UIEventData : public EventData
+template <typename T>
+class SingleValueEventData : public EventData
 {
   public:
-	UIEventData(uint32_t aSpeed = 0) 
+	SingleValueEventData(T aValue ) 
 	{
-		mySpeed = aSpeed;
+		myValue = aValue;
 	}
-	uint32_t mySpeed;
+	T myValue;
 };
 
 class UISetEncoderOffsetEventData : public EventData

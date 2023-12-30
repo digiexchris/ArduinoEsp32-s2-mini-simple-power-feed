@@ -1,10 +1,10 @@
-#include "switches.h"
+#include "MovementSwitches.h"
 #include "shared.h"
 #include "state.h"
 #include "esp_event.h"
 #include <memory>
 
-std::vector<std::shared_ptr<Switch>> Debouncer::mySwitches;
+std::vector<std::shared_ptr<Switch>> MovementSwitches::mySwitches;
 
 Switch::Switch(gpio_num_t aSwitchPin, uint16_t aDelay, Event aPressedEvent, Event aReleasedEvent)
 {
@@ -21,12 +21,11 @@ Switch::Switch(gpio_num_t aSwitchPin, uint16_t aDelay, Event aPressedEvent, Even
 	myHasPendingStateChange = false;
 }
 
-void Debouncer::Create(std::shared_ptr <esp_event_loop_handle_t> anEventLoop)
+void MovementSwitches::Create()
 {
-	myEventLoop = anEventLoop;
 }
 
-void Debouncer::AddSwitch(SwitchName aName, std::shared_ptr<Switch>aSwitch)
+void MovementSwitches::AddSwitch(SwitchName aName, std::shared_ptr<Switch>aSwitch)
 {
 	mySwitches.push_back(aSwitch);
 	gpio_pad_select_gpio(aSwitch->mySwitchPin);
@@ -36,7 +35,7 @@ void Debouncer::AddSwitch(SwitchName aName, std::shared_ptr<Switch>aSwitch)
 	aSwitch->myLastSwitchState = gpio_get_level(aSwitch->mySwitchPin);
 }
 
-void Debouncer::Start()
+void MovementSwitches::Start()
 {
 	// for (std::shared_ptr<Switch> aSwitch : mySwitches)
 	// {
@@ -45,18 +44,18 @@ void Debouncer::Start()
 	xTaskCreatePinnedToCore(DebounceTask, "DebounceTask", 2048, nullptr, 10, nullptr, 0);
 }
 
-void IRAM_ATTR Debouncer::DebounceHandler(void *arg)
+void IRAM_ATTR MovementSwitches::DebounceHandler(void *arg)
 {
 	Switch *aSwitch = static_cast<Switch *>(arg);
 	aSwitch->myLastStateChangeTime = xTaskGetTickCountFromISR();
 	aSwitch->myHasPendingStateChange = true;
 }
 
-void Debouncer::DebounceTask(void *arg)
+void MovementSwitches::DebounceTask(void *arg)
 {
     while (true)
     {
-        for (auto &aSwitch : Debouncer::mySwitches)
+        for (auto &aSwitch : MovementSwitches::mySwitches)
         {
             bool currentLevel = gpio_get_level(aSwitch->mySwitchPin);
 
@@ -76,7 +75,7 @@ void Debouncer::DebounceTask(void *arg)
                     aSwitch->myHasPendingStateChange = false;
                     Event event = currentLevel ? aSwitch->mySwitchPressedEvent : aSwitch->mySwitchReleasedEvent;
 
-                    ESP_ERROR_CHECK(PublishEvent(STATE_MACHINE_EVENT, static_cast<int32_t>(event), nullptr);
+                    ESP_ERROR_CHECK(PublishEvent(COMMAND_EVENT, event));
                 }
             }
         }

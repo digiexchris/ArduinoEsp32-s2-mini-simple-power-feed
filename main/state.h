@@ -23,3 +23,9 @@ enum class UIState
 	Stopping,
 	Stopped
 };
+
+enum class SpeedUnit
+{
+	MMPM = 0,
+	IPM
+};

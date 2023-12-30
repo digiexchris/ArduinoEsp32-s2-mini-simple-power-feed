@@ -38,10 +38,10 @@ struct Switch
 	bool myHasPendingStateChange;
 };
 
-class Debouncer : public EventPublisher}
+class MovementSwitches : public EventPublisher
 {
   public:
-	static void Create(std::shared_ptr<esp_event_loop_handle_t> anEventLoop);
+	static void Create();
 
 	static void AddSwitch(SwitchName aName, std::shared_ptr<Switch> aSwitch);
 
