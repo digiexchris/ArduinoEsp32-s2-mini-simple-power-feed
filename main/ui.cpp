@@ -12,7 +12,7 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 
-ESP_EVENT_DEFINE_BASE(UI_QUEUE_EVENT);
+std::shared_ptr<UI> UI::myRef = nullptr;
 
 UI::UI(gpio_num_t sdaPin, 
 	   gpio_num_t sclPin, 
@@ -20,24 +20,18 @@ UI::UI(gpio_num_t sdaPin,
 	   uint i2cClkFreq, 
 	   gpio_num_t anEncAPin, 
 	   gpio_num_t aEncBPin, 
-	   gpio_num_t aButtonPin)
+	   gpio_num_t aButtonPin,
+//	   uint32_t aSavedNormalSpeed,
+	   SpeedUnit aSavedSpeedUnits)
 {
+	myRapidSpeed = 0;
+	mySpeedUnits = aSavedSpeedUnits;
 	
-	mySettings = LoadSettings();
 	myButtonPin = aButtonPin;
 	myUIState = UIState::Stopped;
-	myScreen = std::make_unique<Screen>(sdaPin, sclPin, i2cPort, i2cClkFreq, mySettings);
-	myRef = this;
-	esp_event_loop_args_t loopArgs = {
-		.queue_size = 16,
-		.task_name = "UIEventLoop", // task will be created
-		.task_priority = uxTaskPriorityGet(NULL),
-		.task_stack_size = 3072*2,
-		.task_core_id = tskNO_AFFINITY};
-	
-	myUIEventLoop = std::make_shared<esp_event_loop_handle_t>();
-	ESP_ERROR_CHECK(esp_event_loop_create(&loopArgs, myUIEventLoop.get()));
-
+	myScreen = std::make_unique<Screen>(sdaPin, sclPin, i2cPort, i2cClkFreq);
+	myRef.reset(this);
+	myIsRapid = false;
 
 	auto led = configureLed(RGB_LED_PIN);
 
@@ -52,88 +46,88 @@ UI::UI(gpio_num_t sdaPin,
 	
 	xTaskCreatePinnedToCore(ToggleUnitsButtonTask, "ToggleUnitsButtonTask", 2048*2, this, 1, nullptr, 0);
 
-	const esp_timer_create_args_t timer_args = {
-		.callback = &CheckAndSaveSettingsCallback,
-		/* argument specified here will be passed to timer callback function */
-		.arg = this,
-		.name = "SaveSettings60S"};
+//	myNormalSpeed = aSavedNormalSpeed;
 
-	esp_timer_create(&timer_args, &myTimer);
-	esp_timer_start_periodic(myTimer, 60000000);
-	
 	ESP_LOGI("UI", "UI constructor complete");
 }
 
-void UI::ProcessUIEventLoopTask(void *pvParameters)
+void UI::ProcessEventCallback(void *aUi, esp_event_base_t base, int32_t id, void *payload)
 {
-	UI *ui = (UI *)pvParameters;
-	while (true)
-	{
-		esp_event_loop_run(*ui->myUIEventLoop, 500);
-		vTaskDelay(50 * portTICK_PERIOD_MS);
-	}
+	Event event = static_cast<Event>(id);
+
+	EventData *eventData = static_cast<EventData*>(payload);
+
+	myRef->ProcessEvent(event, eventData);
 }
 
-std::shared_ptr<esp_event_loop_handle_t> UI::GetUiEventLoop() {
-	return myUIEventLoop;
-}
-
-void UI::ProcessUIEventLoopIteration(void *aUi, esp_event_base_t base, int32_t id, void *payload)
-{
-	UI *ui = (UI *)aUi;
-
-	ASSERT_MSG(ui, "ProcessUIEventLoopIteration", "UI was null on start of task");
-
-	UIEvent event = static_cast<UIEvent>(id);
-
-	UIEventData *eventData = static_cast<UIEventData*>(payload);
-
-	ui->ProcessUIEvent(event, eventData);
-}
-
-void UI::ProcessUIEvent(UIEvent aEvent, UIEventData *aEventData)
+void UI::ProcessEvent(Event aEvent, EventData *aEventData)
 {
 	switch (aEvent)
 	{
-	case UIEvent::SetSpeed:
-		myScreen->SetSpeed(aEventData->mySpeed);
-		break;
-	case UIEvent::MoveLeft:
+	case Event::MovingLeft:
 		myScreen->SetState(UIState::MovingLeft);
 		break;
-	case UIEvent::MoveRight:
+	case Event::MovingRight:
 		myScreen->SetState(UIState::MovingRight);
 		break;
-	case UIEvent::RapidSpeed:
+	case Event::RapidSpeed:
+		myIsRapid = true;
 		myScreen->SetSpeedState(SpeedState::Rapid);
+		myScreen->SetSpeed(myRapidSpeed);
 		break;
-	case UIEvent::NormalSpeed:
+	case Event::NormalSpeed:
+		myIsRapid = false;
 		myScreen->SetSpeedState(SpeedState::Normal);
+		myScreen->SetSpeed(myNormalSpeed);
 		break;
-	case UIEvent::Stopping:
+	case Event::Stopping:
 		myScreen->SetState(UIState::Stopping);
 		break;
-	case UIEvent::Stopped:
+	case Event::Stopped:
 		myScreen->SetState(UIState::Stopped);
 		break;
-	case UIEvent::ToggleUnits:
+	case Event::ToggleUnits:
 		ToggleUnits();
 		break;
-	case UIEvent::SetEncoderOffset:
-		mySettings->myEncoderOffset = ((UISetEncoderOffsetEventData*)aEventData)->myEncoderOffset;
+	case Event::UpdateNormalSpeed: 
+		{
+		SingleValueEventData<uint32_t> *evt = (SingleValueEventData<uint32_t>*)aEventData;
+			myNormalSpeed = evt->myValue;
+			if (!myIsRapid)
+			{
+				myScreen->SetSpeed(myNormalSpeed);
+			}
+		}
+		break;
+	case Event::UpdateRapidSpeed:
+		{
+			SingleValueEventData<uint32_t> *evt = (SingleValueEventData<uint32_t>*)aEventData;
+			myRapidSpeed = evt->myValue;
+			if (myIsRapid)
+			{
+				myScreen->SetSpeed(myRapidSpeed);
+			}
+		}
+		break;
+	default:
 		break;
 	}
 }
 
 void UI::Start()
 {
-	
-	ESP_ERROR_CHECK(esp_event_handler_instance_register_with(*myUIEventLoop, UI_QUEUE_EVENT, ESP_EVENT_ANY_ID, ProcessUIEventLoopIteration, myRef, nullptr));
-	BaseType_t result = xTaskCreatePinnedToCore(ProcessUIEventLoopTask, "UIQueueUpdate", 2048*2, myRef, 1, NULL, 1);
-	ASSERT_MSG(result == pdPASS, "Could not start UI event loop task, error: %d", result);
-	
 	myScreen->Start();
 	
+	RegisterEventHandler(STATE_TRANSITION_EVENT, Event::Any, ProcessEventCallback);
+	RegisterEventHandler(COMMAND_EVENT, Event::RapidSpeed, ProcessEventCallback);
+	RegisterEventHandler(COMMAND_EVENT, Event::NormalSpeed, ProcessEventCallback);
+	RegisterEventHandler(COMMAND_EVENT, Event::UpdateNormalSpeed, ProcessEventCallback);
+	RegisterEventHandler(COMMAND_EVENT, Event::UpdateRapidSpeed, ProcessEventCallback);
+	RegisterEventHandler(COMMAND_EVENT, Event::ToggleUnits, ProcessEventCallback);
+
+	myScreen->SetUnit(mySpeedUnits);
+	myScreen->SetSpeed(myNormalSpeed);
+
 	ESP_LOGI("UI", "UI init complete");
 }
 
@@ -184,7 +178,7 @@ void UI::ToggleUnitsButtonTask(void *params)
 	}
 	
 }
-
+//TODO move the units button to the encoder or switches.
 void UI::ToggleUnitsButton()
 {
     bool buttonPressed = false;
@@ -208,7 +202,7 @@ void UI::ToggleUnitsButton()
 
                 if (duration.count() >= 1 && !buttonPressedEventSent)
                 {
-                    ESP_ERROR_CHECK( esp_event_post_to(*myUIEventLoop, UI_QUEUE_EVENT, static_cast<int32_t>(UIEvent::ToggleUnits), nullptr, sizeof(nullptr), portMAX_DELAY));
+                    ESP_ERROR_CHECK(PublishEvent(COMMAND_EVENT,Event::ToggleUnits));
                     buttonPressedEventSent = true;
                 }
             }
@@ -222,144 +216,18 @@ void UI::ToggleUnitsButton()
     }
 }
 
-std::shared_ptr<UI::Settings> UI::LoadSettings()
-{
-	nvs_handle_t nvs_handle;
-	esp_err_t err;
-
-	std::shared_ptr<Settings> settings = std::make_shared<Settings>();
-
-	// Initialize NVS
-	err = nvs_flash_init();
-	ASSERT_MSG(err == ESP_OK, "LoadSettings: nvs_flash_init", err);
-
-	// Open NVS handle
-	err = nvs_open(STORAGE_NAMESPACE, NVS_READONLY, &nvs_handle);
-	ASSERT_MSG(err == ESP_OK, "LoadSettings: nvs_open", err);
-
-	// Read the offset value
-	err = nvs_get_i32(nvs_handle, STORAGE_ENCODER_OFFSET_KEY, &settings->myEncoderOffset);
-	if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND)
-	{
-		if (err == ESP_ERR_NVS_NOT_FOUND)
-		{
-			settings->myEncoderOffset = 0;
-		}
-		else
-		{
-			nvs_close(nvs_handle);
-			ASSERT_MSG(false, "SaveSettings: nvs_get_i32", err);
-			return settings;
-		}
-	}
-
-	// Read the offset value
-	err = nvs_get_u8(nvs_handle, STORAGE_UI_UNITS_KEY, (uint8_t*)&settings->myUnits);
-	if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND)
-	{
-		if (err == ESP_ERR_NVS_NOT_FOUND)
-		{
-			settings->myUnits = SpeedUnit::MMPM;
-		}
-		else
-		{
-			nvs_close(nvs_handle);
-			ASSERT_MSG(false, "SaveSettings: nvs_set_i8", err);
-			return settings;
-		}
-	}
-
-	// Close NVS handle
-	nvs_close(nvs_handle);
-
-	return settings;
-}
-
-void UI::SaveSettings(std::shared_ptr<UI::Settings> settings)
-{
-	nvs_handle_t nvs_handle;
-	esp_err_t err;
-
-
-	// Initialize NVS
-	err = nvs_flash_init();
-	if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
-	{
-		ESP_ERROR_CHECK(nvs_flash_erase());
-		err = nvs_flash_init();
-	}
-	ESP_ERROR_CHECK(err);
-	ASSERT_MSG(err == ESP_OK, "SaveSettings: nvs_flash_init", err);
-
-	// Open NVS handle
-	err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &nvs_handle);
-	ASSERT_MSG(err == ESP_OK, "SaveSettings: nvs_open", err);
-
-	// Write the offset value
-	err = nvs_set_i32(nvs_handle, STORAGE_ENCODER_OFFSET_KEY, settings->myEncoderOffset);
-	if (err != ESP_OK)
-	{
-		nvs_close(nvs_handle);
-		ASSERT_MSG(false, "SaveSettings: nvs_set_i32", err);
-		return;
-	}
-
-	err = nvs_set_u8(nvs_handle, STORAGE_ENCODER_OFFSET_KEY, (uint8_t)settings->myUnits);
-	if (err != ESP_OK)
-	{
-		nvs_close(nvs_handle);
-		ASSERT_MSG(false, "SaveSettings: nvs_set_i8", err);
-		return;
-	}
-	// Commit changes
-	err = nvs_commit(nvs_handle);
-	if (err != ESP_OK)
-	{
-		nvs_close(nvs_handle);
-		ASSERT_MSG(false, "SaveSettings: nvs_commit", err);
-		return;
-	}
-
-	// Close NVS handle
-	nvs_close(nvs_handle);
-
-	return;
-}
-
-void UI::CheckAndSaveSettingsCallback(void *param)
-{
-	bool changed = false;
-	UI *ui = (UI *)param;
-	int32_t offset = ui->mySettings->myEncoderOffset;
-	if (ui->myPrevSettings->myEncoderOffset != offset)
-	{
-		ui->myPrevSettings->myEncoderOffset = offset;
-		changed = true;
-	}
-
-	SpeedUnit units = ui->mySettings->myUnits;
-	if (ui->myPrevSettings->myUnits != units)
-	{
-		ui->myPrevSettings->myUnits = units;
-		changed = true;
-	}
-
-	if (changed)
-	{
-		ui->SaveSettings(ui->mySettings);
-	}
-}
-
 void UI::ToggleUnits() 
 {
-	if (mySettings->myUnits == SpeedUnit::MMPM)
+	if (mySpeedUnits == SpeedUnit::MMPM)
 	{
-		mySettings->myUnits = SpeedUnit::IPM;
+		mySpeedUnits = SpeedUnit::IPM;
 	}
 	else
 	{
-		mySettings->myUnits = SpeedUnit::MMPM;
+		mySpeedUnits = SpeedUnit::MMPM;
 	}
 
-	myScreen->SetUnit(mySettings->myUnits);
+	myScreen->SetUnit(mySpeedUnits);
+
+	PublishEvent(SETTINGS_EVENT, Event::SetSpeedUnit, new SingleValueEventData<SpeedUnit>(mySpeedUnits));
 }

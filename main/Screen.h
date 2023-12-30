@@ -5,6 +5,7 @@
 #include <u8g2.h>
 #include <memory>
 #include "shared.h"
+#include "state.h"
 
 extern "C"
 {
@@ -28,8 +29,8 @@ class Screen
 	void ToggleUnits();
 
   private:
-	uint16_t mySpeed;
-	uint16_t myPrevSpeed;
+	uint32_t mySpeed;
+	uint32_t myPrevSpeed;
 	UIState myState;
 	UIState myPrevState;
 	SpeedState mySpeedState;

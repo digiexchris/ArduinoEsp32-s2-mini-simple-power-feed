@@ -1,4 +1,4 @@
-#include "SpeedUpdateHandler.h"
+#include "RapidPot.h"
 #include <driver/adc.h>
 #include <esp_err.h>
 #include <freertos/FreeRTOS.h>
@@ -10,11 +10,11 @@
 #include "StateMachine.h"
 #include "esp_adc_cal.h"
 
-SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, std::shared_ptr<esp_event_loop_handle_t> anEventLoop, uint32_t maxDriverFreq) {
-    speedPin = aSpeedPin;
+RapidPot::RapidPot(adc1_channel_t aSpeedPin, uint32_t maxDriverFreq)
+	: EventPublisher() {
+	speedPin = aSpeedPin;
     myMaxDriverFreq = maxDriverFreq;
 	rapidSpeedADC = 0;
-	myEventLoop = anEventLoop;
 	setSpeedADC = 0;
 	myADC1Calibration = new esp_adc_cal_characteristics_t();
 
@@ -33,27 +33,20 @@ SpeedUpdateHandler::SpeedUpdateHandler(adc1_channel_t aSpeedPin, std::shared_ptr
     //start the update task
 }
 
-void SpeedUpdateHandler::Start() {
+void RapidPot::Start() {
 	//start the update task
 	xTaskCreatePinnedToCore(&UpdateTask,"update speed", 4048, this, 4, &updateTaskHandle, 0);
 }
 
-uint32_t SpeedUpdateHandler::GetNormalSpeed() {
+uint32_t RapidPot::GetNormalSpeed() {
     return setSpeedADC;
 }
 
-uint32_t SpeedUpdateHandler::GetRapidSpeed() {
+uint32_t RapidPot::GetRapidSpeed() {
 	return rapidSpeedADC;
 }
 
-//#include "esp_heap_caps.h"
-//#include "esp_heap_trace.h"
-//#define NUM_RECORDS 100
-//static heap_trace_record_t trace_record[NUM_RECORDS]; // This buffer must be in internal RAM
-
-void SpeedUpdateHandler::UpdateSpeeds() {
-	//heap_trace_init_standalone(trace_record, NUM_RECORDS);
-	//ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+void RapidPot::UpdateSpeeds() {
 
 	while (true)
 	{
@@ -109,9 +102,9 @@ void SpeedUpdateHandler::UpdateSpeeds() {
 
 			rapidSpeedADC.store(AVERAGED, std::memory_order_relaxed);
 
-			UpdateSpeedEventData *eventData = new UpdateSpeedEventData(scaledAvg);
+			SingleValueEventData<uint32_t> *eventData = new SingleValueEventData<uint32_t>(scaledAvg);
 
-			ESP_ERROR_CHECK(esp_event_post_to(*myEventLoop, STATE_MACHINE_EVENT, static_cast<int32_t>(Event::UpdateRapidSpeed), eventData, sizeof(UpdateSpeedEventData), portMAX_DELAY));
+			PublishEvent(COMMAND_EVENT, Event::UpdateRapidSpeed, eventData);
         }
 
 		//heap_trace_stop();
@@ -121,7 +114,7 @@ void SpeedUpdateHandler::UpdateSpeeds() {
     }
 }
 
-void SpeedUpdateHandler::UpdateTask(void* aHandler) {
-    SpeedUpdateHandler* handler = static_cast<SpeedUpdateHandler*>(aHandler);
+void RapidPot::UpdateTask(void* aHandler) {
+    RapidPot* handler = static_cast<RapidPot*>(aHandler);
    handler->UpdateSpeeds();
 }

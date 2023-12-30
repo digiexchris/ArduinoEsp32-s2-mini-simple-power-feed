@@ -38,10 +38,10 @@ struct Switch
 	bool myHasPendingStateChange;
 };
 
-class Debouncer
+class MovementSwitches : public EventPublisher
 {
   public:
-	static void Create(std::shared_ptr<esp_event_loop_handle_t> anEventLoop);
+	static void Create();
 
 	static void AddSwitch(SwitchName aName, std::shared_ptr<Switch> aSwitch);
 
@@ -49,7 +49,7 @@ class Debouncer
 
   private:
 	static std::shared_ptr<esp_event_loop_handle_t> myEventLoop;
-	
+
 	static std::vector<std::shared_ptr<Switch>> mySwitches;
 
 	static void IRAM_ATTR DebounceHandler(void *arg);

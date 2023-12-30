@@ -13,20 +13,20 @@ RotaryEncoder::RotaryEncoder(
 	gpio_num_t anAPin,
 	gpio_num_t aBPin,
 	gpio_num_t aButtonPin,
-	std::shared_ptr<esp_event_loop_handle_t> myEventLoop,
 	uint32_t aMaxStepsPerSecond,
-	int32_t aSavedEncoderOffset	) :
+	int32_t aSavedEncoderCount	) :
 
 								   myEncAPin(anAPin),
 								   myEncBPin(aBPin),
 								   myPrevCount(0),
 								   myCount(0),
-								   myEventLoop(myEventLoop),
 								   myEncoder(nullptr),
 								   myMaxStepsPerSecond(aMaxStepsPerSecond)
 																											
 {
-	mySavedOffset = aSavedEncoderOffset; //TODO get this from NVS
+	mySavedCount = aSavedEncoderCount; 
+	
+	myOffset = 0;
 	rotary_encoder_config_t config = ROTARY_ENCODER_DEFAULT_CONFIG((rotary_encoder_dev_t)PCNT_UNIT_2, anAPin, aBPin);
 	
 	//stepper already installed the service, so calling this with false.
@@ -46,8 +46,6 @@ void RotaryEncoder::begin()
 	// Start encoder
 	ESP_ERROR_CHECK(myEncoder->start(myEncoder));
 	
-	//myEncoder->set_counter_value(myEncoder, mySavedOffset);
-	
 	xTaskCreate(UpdateTask, "UpdateTask", 2048*4, this, 10, NULL);
 }
 
@@ -59,28 +57,27 @@ void RotaryEncoder::pause()
 int RotaryEncoder::getCount()
 {
 	int count = myEncoder->get_counter_value(myEncoder);
-	bool updateOffset = false;
-	myCount = count - mySavedOffset;
+	myCount = count + myOffset + mySavedCount;
 	if (myCount < 0)
 	{
-		mySavedOffset += myCount;
-		updateOffset = true;
+		myOffset += myCount;
+//		updateOffset = true;
 		myCount = 0;
 	}
 
 	if (myCount > ENCODER_COUNTS_FULL_SCALE)
 	{
-		mySavedOffset += myCount - ENCODER_COUNTS_FULL_SCALE;
-		updateOffset = true;
+		myOffset += myCount - ENCODER_COUNTS_FULL_SCALE;
+//		updateOffset = true;
 		myCount = ENCODER_COUNTS_FULL_SCALE;
 	}
 	
-	if (updateOffset)
-	{
-		UISetEncoderOffsetEventData *evt = new UISetEncoderOffsetEventData(mySavedOffset);
-
-		ESP_ERROR_CHECK(esp_event_post_to(myEventLoop, UI_QUEUE_EVENT, static_cast<int32_t>(UIEvent::SetEncoderOffset), evt, sizeof(UISetEncoderOffsetEventData), portMAX_DELAY));
-	}
+//	if (updateOffset)
+//	{
+//		UISetEncoderOffsetEventData *evt = new UISetEncoderOffsetEventData(mySavedOffset);
+//
+//		PublishEvent(SETTINGS_EVENT, Event::SetEncoderOffset, evt);
+//	}
 
 	return myCount;
 }
@@ -108,8 +105,11 @@ void RotaryEncoder::Update()
 	{	
 		myPrevCount = myCount;
 		auto stepsPerSecond = mapValueToRange(myPrevCount, 0, ENCODER_COUNTS_FULL_SCALE, 0, myMaxStepsPerSecond);
-		UpdateSpeedEventData *eventData = new UpdateSpeedEventData(stepsPerSecond);
+		SingleValueEventData<uint32_t> *eventData = new SingleValueEventData<uint32_t>(stepsPerSecond);
 
-		ESP_ERROR_CHECK(esp_event_post_to(*myEventLoop, STATE_MACHINE_EVENT, static_cast<int32_t>(Event::UpdateNormalSpeed), eventData, sizeof(UpdateSpeedEventData), portMAX_DELAY));
+		PublishEvent(COMMAND_EVENT, Event::UpdateNormalSpeed, eventData);
+		
+		SingleValueEventData<int32_t> *encoderEventData = new SingleValueEventData<int32_t>(myPrevCount);
+		PublishEvent(SETTINGS_EVENT, Event::UpdateEncoderCount, encoderEventData);
 	}
 }

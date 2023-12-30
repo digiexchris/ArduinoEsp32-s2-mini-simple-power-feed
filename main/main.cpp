@@ -12,8 +12,8 @@
 #include "config.h"
 #include "shared.h"
 #include <soc/adc_channel.h>
-#include "SpeedUpdateHandler.h"
-#include "switches.h"
+#include "RapidPot.h"
+#include "MovementSwitches.h"
 #include "ui.h"
 #include "driver/gpio.h"
 #include "Encoder.h"
@@ -31,6 +31,13 @@
 
 //TODO add stop positions to oled display
 
+static DRAM_ATTR std::shared_ptr<Settings> mySettings;
+static DRAM_ATTR std::shared_ptr<RapidPot> mySpeedUpdateHandler;
+static DRAM_ATTR std::shared_ptr<StateMachine> myState;
+static DRAM_ATTR std::shared_ptr<Stepper> myStepper;
+static DRAM_ATTR std::shared_ptr<UI> myUI;
+static DRAM_ATTR std::shared_ptr<RotaryEncoder> myEncoder;
+
 std::shared_ptr<Switch> leftSwitch;
 std::shared_ptr<Switch> rightSwitch;
 std::shared_ptr<Switch> rapidSwitch;
@@ -39,30 +46,53 @@ void setup() {
 	//gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1 | ESP_INTR_FLAG_EDGE | ESP_INTR_FLAG_IRAM);
 	
 	ESP_LOGI("main.cpp", "Setup start");
-	myStepper = std::make_shared<Stepper>();
-	myUI = std::make_shared<UI>(I2C_MASTER_SDA_IO, I2C_MASTER_SCL_IO, I2C_MASTER_NUM, I2C_MASTER_FREQ_HZ, ENCODER_A_PIN, ENCODER_B_PIN, ENCODER_BUTTON_PIN);
-	myStepper->Init(dirPinStepper, enablePinStepper, stepPinStepper, maxStepsPerSecond);
-	myState = std::make_shared<StateMachine>(myStepper, myUI->GetUiEventLoop());
-	mySpeedUpdateHandler = std::make_shared<SpeedUpdateHandler>(speedPin, myState->GetEventLoop(), maxStepsPerSecond);
-	myEncoder = std::make_shared<RotaryEncoder>(ENCODER_A_PIN, ENCODER_B_PIN, ENCODER_BUTTON_PIN, myState->GetEventLoop(), maxStepsPerSecond);
-	
-	Debouncer::Create(myState->GetEventLoop());
-	leftSwitch = std::make_shared<Switch>(LEFTPIN, 50, Event::LeftPressed, Event::LeftReleased);
-	rightSwitch = std::make_shared<Switch>(RIGHTPIN, 50, Event::RightPressed, Event::RightReleased);
-	rapidSwitch = std::make_shared<Switch>(RAPIDPIN, 50, Event::RapidPressed, Event::RapidReleased);
+	mySettings = std::make_shared<Settings>();
 
-	Debouncer::AddSwitch(SwitchName::LEFT, leftSwitch);
-	Debouncer::AddSwitch(SwitchName::RIGHT, rightSwitch);
-	Debouncer::AddSwitch(SwitchName::RAPID, rapidSwitch);
+	std::shared_ptr<SettingsData> savedSettings = mySettings->Get();
+
+	myStepper = std::make_shared<Stepper>();
+	myUI = std::make_shared<UI>(
+		I2C_MASTER_SDA_IO, 
+		I2C_MASTER_SCL_IO, 
+		I2C_MASTER_NUM, 
+		I2C_MASTER_FREQ_HZ, 
+		ENCODER_A_PIN, 
+		ENCODER_B_PIN, 
+		ENCODER_BUTTON_PIN,
+		savedSettings->mySpeedUnits
+	);
+
+	myStepper->Init(
+		dirPinStepper, 
+		enablePinStepper, 
+		stepPinStepper, 
+		maxStepsPerSecond
+	);
+
+	myState = std::make_shared<StateMachine>(myStepper);
+	mySpeedUpdateHandler = std::make_shared<RapidPot>(speedPin, maxStepsPerSecond);
+	
+	myEncoder = std::make_shared<RotaryEncoder>(ENCODER_A_PIN, ENCODER_B_PIN, ENCODER_BUTTON_PIN, maxStepsPerSecond, savedSettings->myEncoderCount);
+	
+	MovementSwitches::Create();
+	leftSwitch = std::make_shared<Switch>(LEFTPIN, 50, Event::MoveLeft, Event::StopMoveLeft);
+	rightSwitch = std::make_shared<Switch>(RIGHTPIN, 50, Event::MoveRight, Event::StopMoveRight);
+	rapidSwitch = std::make_shared<Switch>(RAPIDPIN, 50, Event::RapidSpeed, Event::NormalSpeed);
+
+	MovementSwitches::AddSwitch(SwitchName::LEFT, leftSwitch);
+	MovementSwitches::AddSwitch(SwitchName::RIGHT, rightSwitch);
+	MovementSwitches::AddSwitch(SwitchName::RAPID, rapidSwitch);
 	
   
 	ESP_LOGI("main.cpp", "Setup complete");
-  
+	
+	
+	myUI->Start();
 	//Start state FIRST or the queues will fill and hang
 	myState->Start();
 	mySpeedUpdateHandler->Start();
-	Debouncer::Start();
-	myUI->Start();
+	MovementSwitches::Start();
+	
 	myEncoder->begin();
   
 	ESP_LOGI("main.cpp", "tasks started");
@@ -98,15 +128,25 @@ extern "C" void app_main()
 //   esp_log_level_set("esp32s3.cpu1", ESP_LOG_INFO);
   setup();
 
-  
-
+  std::string prevState = "";
+  std::string prevSpeed = "";
   //
   while(1) {
     
-	const char * state = stateToString(myState->GetState());
-    ESP_LOGI("Current State", "%s", state);
-	ESP_LOGI("Stepper State", "%s", myStepper->GetState().c_str());
-	ESP_LOGI("Current Speed", "%d", myStepper->GetCurrentSpeed());
+	std::string state = stateToString(myState->GetState());
+	std::string speed = std::to_string(myStepper->GetCurrentSpeed());
+
+	if (state != prevState)
+	{
+		ESP_LOGI("State", "%s", state.c_str());
+		prevState = state;	
+	}
+
+	if (speed != prevSpeed)
+	{
+		ESP_LOGI("Speed", "%s", speed.c_str());
+		prevSpeed = speed;
+	}
 	
 	vTaskDelay(portTICK_PERIOD_MS * 1000);
 

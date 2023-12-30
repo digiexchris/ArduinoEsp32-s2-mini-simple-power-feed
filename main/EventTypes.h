@@ -5,43 +5,61 @@
 
 static std::shared_ptr<esp_event_loop_handle_t> myEventLoop;
 
-ESP_EVENT_DECLARE_BASE(STATE_MACHINE_EVENT);
-ESP_EVENT_DECLARE_BASE(UI_QUEUE_EVENT);
+ESP_EVENT_DECLARE_BASE(COMMAND_EVENT);
 ESP_EVENT_DECLARE_BASE(SETTINGS_EVENT);
+ESP_EVENT_DECLARE_BASE(STATE_TRANSITION_EVENT);
 
 enum class Event
 {
-	LeftPressed = 1,
-	LeftReleased,
-	RightPressed,
-	RightReleased,
-	RapidPressed,
-	RapidReleased,
+	Any = -1,
+	// Commands
+	MoveLeft = 0,
+	StopMoveLeft,
+	MoveRight,
+	StopMoveRight,
+	RapidSpeed,
+	NormalSpeed,
 	UpdateNormalSpeed,
 	UpdateRapidSpeed,
 	SetStopped,
 	ToggleUnits,
+
+	// Settings
 	SetEncoderOffset,
-	SetSpeed,
-	UpdateSettings
+	UpdateEncoderCount,
+	SetSpeedUnit,
+	
+	
+	//States
+	MovingLeft,
+	MovingRight,
+	Stopping,
+	Stopped
 };
 
 
 class EventData
 {
   public:
-	EventData(){};
+	EventData(std::string aPublisher = "EventPublisher")
+	{
+		myPublisher = aPublisher;
+	}
 	virtual ~EventData(){};
+	std::string myPublisher;
+  private:
+	
 };
 
-class UIEventData : public EventData
+template <typename T>
+class SingleValueEventData : public EventData
 {
   public:
-	UIEventData(uint32_t aSpeed = 0) 
+	SingleValueEventData(T aValue ) 
 	{
-		mySpeed = aSpeed;
+		myValue = aValue;
 	}
-	uint32_t mySpeed;
+	T myValue;
 };
 
 class UISetEncoderOffsetEventData : public EventData
@@ -59,7 +77,7 @@ class UpdateSpeedEventData : public EventData
   public:
 	UpdateSpeedEventData(){};
 	UpdateSpeedEventData(uint32_t aSpeed): mySpeed(aSpeed){};
-	int16_t mySpeed;
+	int32_t mySpeed;
 
 	// Copy constructor
 	UpdateSpeedEventData(const UpdateSpeedEventData &other)

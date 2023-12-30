@@ -12,13 +12,12 @@
 #include "state.h"
 #include "StateMachine.h"
 #include "esp_adc_cal.h"
+#include "EventTypes.h"
+#include "Event.h"
 
-//#define USE_SPEED_POT 1
-#define USE_SPEED_ENCODER 1
-
-class SpeedUpdateHandler {
+class RapidPot : public EventPublisher {
     public:
-	  SpeedUpdateHandler(adc1_channel_t speedPin, std::shared_ptr<esp_event_loop_handle_t> anEventLoop, uint32_t maxDriverFreq);
+	  RapidPot(adc1_channel_t speedPin, uint32_t maxDriverFreq);
         uint32_t GetNormalSpeed();
         uint32_t GetRapidSpeed();
         static void UpdateTask(void* params);
@@ -29,7 +28,6 @@ class SpeedUpdateHandler {
     private:
         uint32_t myMaxDriverFreq;
         TaskHandle_t updateTaskHandle;
-		std::shared_ptr<esp_event_loop_handle_t> myEventLoop;
         adc1_channel_t speedPin;
         std::atomic<uint32_t> setSpeedADC;
         std::atomic<uint32_t> rapidSpeedADC;

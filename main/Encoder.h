@@ -4,15 +4,15 @@
 #include <memory>
 
 #include <rotary_encoder.h>
+#include "Event.h"
 
-class RotaryEncoder {
+class RotaryEncoder : public EventPublisher {
 public:
   RotaryEncoder(gpio_num_t anAPin,
 				gpio_num_t aBPin,
 				gpio_num_t aButtonPin,
-				std::shared_ptr<esp_event_loop_handle_t> myEventLoop,
 				uint32_t maxStepsPerSecond,
-				int32_t aSavedEncoderOffset = 0);
+				int32_t aSavedEncoderCount = 0);
 	~RotaryEncoder();
 	void begin();
 	int getCount();
@@ -28,7 +28,8 @@ private:
 	gpio_num_t myEncBPin;
 	int myPrevCount;
 	int myCount;
-	int mySavedOffset;
+	int myOffset;
+	int mySavedCount;
 	std::shared_ptr<esp_event_loop_handle_t> myEventLoop;
 	rotary_encoder_t *myEncoder;
 	uint32_t myMaxStepsPerSecond;

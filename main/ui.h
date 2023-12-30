@@ -7,16 +7,13 @@
 #include <memory>
 #include "Screen.h"
 #include <led_strip.h>
+#include "Event.h"
+#include "Settings.h"
+#include "state.h"
 
-//class SpeedEncoder
-//{
-//  public:
-//	SpeedEncoder(gpio_num_t anAPin, gpio_num_t aBPin, gpio_num_t aButtonPin);
-//	
-//  private:
-//};
+class Screen;
 
-class UI
+class UI : public EventPublisher, EventHandler
 {
   public:
 
@@ -28,32 +25,28 @@ class UI
 	   uint i2cClkFreq, 
 	   gpio_num_t anEncAPin, 
 	   gpio_num_t aEncBPin, 
-	   gpio_num_t aButtonPin);
+	   gpio_num_t aButtonPin,
+//	   uint32_t aSavedNormalSpeed,
+	   SpeedUnit aSavedSpeedUnits);
 	void Update();
 	static void UpdateTask(void *pvParameters);
 	void Start();
-	static void ProcessUIEventLoopTask(void *pvParameters);
-	void ProcessUIEventLoopTask();
-	std::shared_ptr<esp_event_loop_handle_t> GetUiEventLoop();
-	static void ProcessUIEventLoopIteration(void *aUi, esp_event_base_t base, int32_t id, void *payload);
+	static void ProcessEventCallback(void *aUi, esp_event_base_t base, int32_t id, void *payload);
 
-	void ProcessUIEvent(UIEvent event, UIEventData* eventData);
+	void ProcessEvent(Event event, EventData* eventData);
 
   private:
-	UI *myRef;
+	static std::shared_ptr<UI> myRef;
 	void ToggleUnitsButton();
 	void ToggleUnits();
 	static void CheckAndSaveSettingsCallback(void *param);
 	static void ToggleUnitsButtonTask(void *params);
 	led_strip_handle_t configureLed(gpio_num_t anLedPin);
-	void SaveSettings(std::shared_ptr<Settings> aSettings);
-	std::shared_ptr<Settings> LoadSettings();
-	//SpeedEncoder* mySpeedEncoder;
 	std::unique_ptr<Screen> myScreen;
-	std::shared_ptr<esp_event_loop_handle_t> myUIEventLoop;
+	uint32_t myNormalSpeed;
+	uint32_t myRapidSpeed;
+	SpeedUnit mySpeedUnits;
+	bool myIsRapid;
 	led_strip_handle_t* myLedHandle;
 	gpio_num_t myButtonPin;
-	std::shared_ptr<Settings> mySettings;
-	std::shared_ptr<Settings> myPrevSettings;
-	esp_timer_handle_t myTimer;
 };

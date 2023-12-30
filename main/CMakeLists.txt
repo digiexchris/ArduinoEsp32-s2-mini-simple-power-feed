@@ -3,7 +3,7 @@
 if(DEFINED USE_DENDO_STEPPER)
 
 idf_component_register(
-	SRCS "Encoder.cpp" "Screen.cpp" "SpeedUpdateHandler.cpp" "main.cpp" "stepper.cpp" "state.cpp" switches.cpp ui.cpp
+	SRCS "ui.cpp" "Settings.cpp" "Encoder.cpp" "Screen.cpp" "SpeedUpdateHandler.cpp" "main.cpp" "stepper.cpp" "state.cpp" switches.cpp ui.cpp
 	INCLUDE_DIRS "."
 	REQUIRED_IDF_TARGETS esp32-s3
 	REQUIRES DendoStepper esp_event ssd1306) #FastAccelStepper arduino)
@@ -11,11 +11,11 @@ idf_component_register(
 else()
 idf_component_register(
 	SRCS
-		SpeedUpdateHandler.cpp
+		RapidPot.cpp
 		main.cpp
 		stepper.cpp
 		StateMachine.cpp
-		switches.cpp
+		MovementSwitches.cpp
 		ui.cpp
 		Event.cpp
 		Screen.cpp
