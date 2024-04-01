@@ -1,17 +1,19 @@
 # This file was automatically generated for projects
 # without default 'CMakeLists.txt' file.
+
+cmake_minimum_required(VERSION 3.16)
+
 if(DEFINED USE_DENDO_STEPPER)
 
 idf_component_register(
 	SRCS "ui.cpp" "Settings.cpp" "Encoder.cpp" "Screen.cpp" "SpeedUpdateHandler.cpp" "main.cpp" "stepper.cpp" "state.cpp" switches.cpp ui.cpp
 	INCLUDE_DIRS "."
-	REQUIRED_IDF_TARGETS esp32-s3
+	REQUIRED_IDF_TARGETS esp32-s3 esp32-s2
 	REQUIRES DendoStepper esp_event ssd1306) #FastAccelStepper arduino)
 		component_compile_options(-Wno-error=format= -Wno-format)
 else()
 idf_component_register(
 	SRCS
-		RapidPot.cpp
 		main.cpp
 		stepper.cpp
 		StateMachine.cpp
@@ -22,7 +24,7 @@ idf_component_register(
 		Encoder.cpp
 		Settings.cpp
 	INCLUDE_DIRS .
-	REQUIRED_IDF_TARGETS esp32s3
+	REQUIRED_IDF_TARGETS esp32s3 esp32s2
 	REQUIRES
 		esp_event
 		FastAccelStepper

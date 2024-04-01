@@ -1,38 +1,25 @@
 //Currently written for the esp32-s2 mini dev kit available on aliexpress, the one based on the esp32-mini board with two rows of pins on each side
 //a 5v level shifter is recommended for the stepper driver inputs, but I have not had any issues without one
-//the stepper driver is a TB6600, but any driver that accepts step/dir inputs should work
+//the stepper driver is a DM556, but any driver that accepts step/dir inputs should work
 //the stepper is a 60BYGH Nema23, but any stepper should work.
 //prioritize rpm over torque, since the align power feed has a relatively high gear ratio
 //if you reuse most of the clutch mechanism
+//my power feed has a 18:73 primary reduction.
 
 #include <memory>
 #include "state.h"
 #include "StateMachine.h"
 #include <esp_log.h>
 #include "config.h"
-#include "shared.h"
+//#include "shared.h"
 #include <soc/adc_channel.h>
-#include "RapidPot.h"
 #include "MovementSwitches.h"
 #include "ui.h"
-#include "driver/gpio.h"
+//#include "driver/gpio.h"
 #include "Encoder.h"
 
-// #define dirPinStepper 4
-// #define enablePinStepper 5
-// #define stepPinStepper 6
-// const adc1_channel_t speedPin = ADC1_GPIO7_CHANNEL;  //front knob pot
-// //#define maxSpeedPin 7 //trimpot to select max speed
-// #define leftPin 35
-// #define rightPin 38
-// #define rapidPin 36
-// #define stopLeftPin 8
-// #define stopRightPin 17
-
-//TODO add stop positions to oled display
-
 static DRAM_ATTR std::shared_ptr<Settings> mySettings;
-static DRAM_ATTR std::shared_ptr<RapidPot> mySpeedUpdateHandler;
+//static DRAM_ATTR std::shared_ptr<RapidPot> mySpeedUpdateHandler;
 static DRAM_ATTR std::shared_ptr<StateMachine> myState;
 static DRAM_ATTR std::shared_ptr<Stepper> myStepper;
 static DRAM_ATTR std::shared_ptr<UI> myUI;
@@ -43,6 +30,7 @@ std::shared_ptr<Switch> rightSwitch;
 std::shared_ptr<Switch> rapidSwitch;
 
 void setup() {
+
 	//gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1 | ESP_INTR_FLAG_EDGE | ESP_INTR_FLAG_IRAM);
 	
 	ESP_LOGI("main.cpp", "Setup start");
@@ -59,6 +47,8 @@ void setup() {
 		ENCODER_A_PIN, 
 		ENCODER_B_PIN, 
 		ENCODER_BUTTON_PIN,
+		savedSettings->myNormalSpeed,
+		savedSettings->myRapidSpeed,
 		savedSettings->mySpeedUnits
 	);
 
@@ -66,13 +56,14 @@ void setup() {
 		dirPinStepper, 
 		enablePinStepper, 
 		stepPinStepper, 
-		maxStepsPerSecond
+		savedSettings->myRapidSpeed,
+		savedSettings->myNormalSpeed
 	);
 
 	myState = std::make_shared<StateMachine>(myStepper);
-	mySpeedUpdateHandler = std::make_shared<RapidPot>(speedPin, maxStepsPerSecond);
+	//mySpeedUpdateHandler = std::make_shared<RapidPot>(speedPin, maxStepsPerSecond);
 	
-	myEncoder = std::make_shared<RotaryEncoder>(ENCODER_A_PIN, ENCODER_B_PIN, ENCODER_BUTTON_PIN, maxStepsPerSecond, savedSettings->myEncoderCount);
+	myEncoder = std::make_shared<RotaryEncoder>(ENCODER_A_PIN, ENCODER_B_PIN, ENCODER_BUTTON_PIN, maxStepsPerSecond, 100);
 	
 	MovementSwitches::Create();
 	leftSwitch = std::make_shared<Switch>(LEFTPIN, 50, Event::MoveLeft, Event::StopMoveLeft);
@@ -90,7 +81,7 @@ void setup() {
 	myUI->Start();
 	//Start state FIRST or the queues will fill and hang
 	myState->Start();
-	mySpeedUpdateHandler->Start();
+	//mySpeedUpdateHandler->Start();
 	MovementSwitches::Start();
 	
 	myEncoder->begin();

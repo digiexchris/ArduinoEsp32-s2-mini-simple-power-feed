@@ -1,25 +1,25 @@
-
+#pragma once
 #ifndef STATE_H
 #define STATE_H
 
 #include <memory>
 #include "stepper.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/ringbuf.h"
-#include "shared.h"
+// #include "freertos/FreeRTOS.h"
+// #include "freertos/task.h"
+// #include "freertos/ringbuf.h"
+// #include "shared.h"
 
 #include "esp_event_base.h"
-#include "esp_event.h"
+// #include "esp_event.h"
 #include "ui.h"
 #include "EventTypes.h"
 #include "Event.h"
 
 
 class UI;
-class StateMachine: public EventHandler, EventPublisher{
+class StateMachine: public EventHandler, public EventPublisher{
 public:
-	StateMachine(std::shared_ptr<Stepper> aStepper);
+	explicit StateMachine(std::shared_ptr<Stepper> aStepper);
 	void Start();
 	State GetState();
 private:

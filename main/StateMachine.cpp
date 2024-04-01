@@ -190,26 +190,25 @@ bool StateMachine::ProcessEvent(Event event, EventData* eventPayload) {
 		case Event::NormalSpeed:
 			NormalSpeedAction();
 			break;
-		case Event::UpdateRapidSpeed: 
+		case Event::UpdateSpeed: 
 		{
-			SingleValueEventData<uint32_t> *eventData = dynamic_cast < SingleValueEventData<uint32_t>*>(eventPayload);
+			SingleValueEventData<int32_t> *eventData = dynamic_cast<SingleValueEventData<int32_t> *>(eventPayload);
 			ASSERT_MSG(eventData, "StateMachine", "Failed to cast event data to UpdateSpeedEventData");
 
-			int16_t speed = eventData->myValue;
-			ESP_LOGI("StateMachine", "Updating rapid speed to %d", speed);
+			int32_t delta = eventData->myValue;
+			
 
-			myStepper->UpdateRapidSpeed(speed);
-			break;
-		}
-		case Event::UpdateNormalSpeed: 
-		{
-			SingleValueEventData<uint32_t> *eventData = dynamic_cast<SingleValueEventData<uint32_t> *>(eventPayload);
-			ASSERT_MSG(eventData, "StateMachine", "Failed to cast event data to UpdateSpeedEventData");
-
-			uint32_t speed = eventData->myValue;
-			ESP_LOGI("StateMachine", "Updating normal speed to %d", speed);
-
-			myStepper->UpdateNormalSpeed(speed);
+			if(currentSpeedState == SpeedState::Normal)
+			{
+				ESP_LOGI("StateMachine", "Updating normal speed by %d", delta);
+				myStepper->UpdateNormalSpeed(delta);
+			} 
+			else 
+			{
+				ESP_LOGI("StateMachine", "Updating rapid speed by %d", delta);
+				myStepper->UpdateRapidSpeed(delta);
+			}
+				
 			break;
 		}
 		default:

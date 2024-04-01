@@ -16,7 +16,7 @@ class Screen
 {
 
   public:
-	SpeedUnit mySpeedUnit;
+	
 
 	Screen(gpio_num_t sdaPin, gpio_num_t sclPin, i2c_port_t i2cPort, uint32_t i2cClkFreq = 100000);
 	void SetSpeed(uint32_t aSpeed);
@@ -28,14 +28,15 @@ class Screen
 	void Start();
 	void ToggleUnits();
 
+	SpeedUnit mySpeedUnit = SpeedUnit::MMPM;
   private:
-	uint32_t mySpeed;
-	uint32_t myPrevSpeed;
-	UIState myState;
-	UIState myPrevState;
-	SpeedState mySpeedState;
-	SpeedState myPrevSpeedState;
-	SpeedUnit myPrevSpeedUnit;
+	uint32_t mySpeed = 0;
+	uint32_t myPrevSpeed = 0;
+	UIState myState = UIState::Stopped;
+	UIState myPrevState = UIState::Stopped;
+	SpeedState mySpeedState = SpeedState::Normal;
+	SpeedState myPrevSpeedState = SpeedState::Normal;
+	SpeedUnit myPrevSpeedUnit = SpeedUnit::MMPM;
 	u8g2_t u8g2;
 	u8g2_esp32_hal_t u8g2_esp32_hal;
 	

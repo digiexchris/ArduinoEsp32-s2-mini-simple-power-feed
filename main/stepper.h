@@ -1,5 +1,7 @@
 #ifndef STEPPER_H
 #define STEPPER_H
+#include "Event.h"
+#include "EventTypes.h"
 #include "config.h"
 
 #ifdef USE_DENDO_STEPPER
@@ -10,7 +12,9 @@
 #include <memory>
 #include <mutex>
 
-class Stepper {
+#include "Event.h"
+
+class Stepper : public EventPublisher {
 public:
 
     enum class StepperDirection {
@@ -18,9 +22,10 @@ public:
         Right = false
     };
     Stepper();
-    void Init(uint8_t dirPin, uint8_t enablePin, uint8_t stepPin, uint16_t rapidSpeed);
-	void UpdateNormalSpeed(uint16_t aNormalSpeed);
-	void UpdateRapidSpeed(uint16_t aRapidSpeed);
+	Stepper(int16_t aRapidSpeed, int16_t aNormalSpeed);
+    void Init(uint8_t dirPin, uint8_t enablePin, uint8_t stepPin, int16_t rapidSpeed, int16_t normalSpeed);
+	void UpdateNormalSpeed(int16_t aNormalSpeedDelta);
+	void UpdateRapidSpeed(int16_t aRapidSpeedDelta);
     void MoveLeft();
     void MoveRight();
     void Stop();
@@ -70,8 +75,8 @@ private:
 #endif
     bool myUseRapidSpeed = false;
         
-    uint16_t myRapidSpeed;
-    uint16_t myNormalSpeed;
+    int16_t myRapidSpeed;
+    int16_t myNormalSpeed;
 };
 
 #endif // STEPPER_H

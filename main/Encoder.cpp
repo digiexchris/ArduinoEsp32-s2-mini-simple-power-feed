@@ -2,6 +2,7 @@
 #include "driver/pcnt.h"
 #include "Encoder.h"
 #include "config.h"
+#include <cstdint>
 #include <memory>
 #include <esp_event.h>
 #include "EventTypes.h"
@@ -101,15 +102,16 @@ void RotaryEncoder::UpdateTask(void *pvParameters)
 void RotaryEncoder::Update()
 {
 	myCount = getCount();
+
 	if (myPrevCount != myCount)
 	{	
-		myPrevCount = myCount;
-		auto stepsPerSecond = mapValueToRange(myPrevCount, 0, ENCODER_COUNTS_FULL_SCALE, 0, myMaxStepsPerSecond);
-		SingleValueEventData<uint32_t> *eventData = new SingleValueEventData<uint32_t>(stepsPerSecond);
-
-		PublishEvent(COMMAND_EVENT, Event::UpdateNormalSpeed, eventData);
 		
-		SingleValueEventData<int32_t> *encoderEventData = new SingleValueEventData<int32_t>(myPrevCount);
-		PublishEvent(SETTINGS_EVENT, Event::UpdateEncoderCount, encoderEventData);
+		int32_t delta = (myCount - myPrevCount)*2;
+		myPrevCount = myCount;
+		
+		auto *eventData = new SingleValueEventData<int32_t>(delta);
+
+		PublishEvent(COMMAND_EVENT, Event::UpdateSpeed, eventData);
+
 	}
 }

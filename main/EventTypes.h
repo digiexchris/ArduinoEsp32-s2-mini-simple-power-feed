@@ -8,6 +8,7 @@ static std::shared_ptr<esp_event_loop_handle_t> myEventLoop;
 ESP_EVENT_DECLARE_BASE(COMMAND_EVENT);
 ESP_EVENT_DECLARE_BASE(SETTINGS_EVENT);
 ESP_EVENT_DECLARE_BASE(STATE_TRANSITION_EVENT);
+ESP_EVENT_DECLARE_BASE(UI_EVENT);
 
 enum class Event
 {
@@ -19,15 +20,15 @@ enum class Event
 	StopMoveRight,
 	RapidSpeed,
 	NormalSpeed,
-	UpdateNormalSpeed,
-	UpdateRapidSpeed,
+	UpdateSpeed, //update a speed by a delta, based on which speed state the machine is in
 	SetStopped,
 	ToggleUnits,
 
 	// Settings
-	SetEncoderOffset,
-	UpdateEncoderCount,
+	//SetEncoderOffset,
 	SetSpeedUnit,
+	SaveNormalSpeed,
+	SaveRapidSpeed,
 	
 	
 	//States
@@ -77,11 +78,11 @@ class UpdateSpeedEventData : public EventData
   public:
 	UpdateSpeedEventData(){};
 	UpdateSpeedEventData(uint32_t aSpeed): mySpeed(aSpeed){};
-	int32_t mySpeed;
+	
 
 	// Copy constructor
 	UpdateSpeedEventData(const UpdateSpeedEventData &other)
-		: mySpeed(other.mySpeed){};
+		: EventData(), mySpeed(other.mySpeed){};
 
 	// Copy assignment operator
 	UpdateSpeedEventData &operator=(const UpdateSpeedEventData &other)
@@ -93,6 +94,7 @@ class UpdateSpeedEventData : public EventData
 		return *this;
 	}
 
+	int32_t mySpeed;
 	// Destructor
 	~UpdateSpeedEventData() override {}
 };

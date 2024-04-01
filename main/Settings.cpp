@@ -17,6 +17,10 @@ Settings::Settings() : EventHandler()
 		// Retry nvs_flash_init
 		ESP_ERROR_CHECK(nvs_flash_erase());
 		err = nvs_flash_init();
+		myData->myNormalSpeed = 5;
+		myData->myRapidSpeed = maxStepsPerSecond;
+		myData->mySpeedUnits = SpeedUnit::MMPM;
+		Save();
 	}
 	ESP_ERROR_CHECK(err);
 	
@@ -28,14 +32,16 @@ Settings::Settings() : EventHandler()
 	Load();
 
 	RegisterEventHandler(SETTINGS_EVENT, Event::SetSpeedUnit, &UpdateSettingsEventCallback);
-	RegisterEventHandler(SETTINGS_EVENT, Event::UpdateEncoderCount, &UpdateSettingsEventCallback);
+	RegisterEventHandler(SETTINGS_EVENT, Event::SaveNormalSpeed, &UpdateSettingsEventCallback);
+	RegisterEventHandler(SETTINGS_EVENT, Event::SaveRapidSpeed, &UpdateSettingsEventCallback);
 
 	const esp_timer_create_args_t timer_args = {
 		.callback = SaveSettingsTimerCallback,
 		/* argument specified here will be passed to timer callback function */
 		.arg = this,
+		.dispatch_method = ESP_TIMER_TASK,
 		.name = "SaveSettings30S",
-//		.skip_unhandled_events = true
+		.skip_unhandled_events = true
 
 	};
 
@@ -53,7 +59,15 @@ esp_err_t Settings::Save()
 	}
 
 	// Write the encoder offset to NVS
-	err = nvs_set_i32(my_handle, ENCODER_COUNT_KEY, myData->myEncoderCount);
+	err = nvs_set_i32(my_handle, NORMAL_SPEED_KEY, myData->myNormalSpeed);
+	if (err != ESP_OK)
+	{
+		nvs_close(my_handle);
+		return err;
+	}
+
+	// Write the encoder offset to NVS
+	err = nvs_set_i32(my_handle, RAPID_SPEED_KEY, myData->myRapidSpeed);
 	if (err != ESP_OK)
 	{
 		nvs_close(my_handle);
@@ -82,7 +96,7 @@ esp_err_t Settings::Save()
 	ESP_LOGI("Settings", "Saved Settings");
 
 	auto s = Get(true);
-	ESP_LOGI("Settings", "Saved Values: %d, %d", s->mySpeedUnits, s->myEncoderCount);
+	ESP_LOGI("Settings", "Saved Values: %d, %d, $d", s->mySpeedUnits, s->myNormalSpeed, s->myRapidSpeed);
 
 	return ESP_OK;
 }
@@ -98,7 +112,14 @@ esp_err_t Settings::Load()
 	}
 	
 	// Read the normal speed from NVS
-	err = nvs_get_i32(my_handle, ENCODER_COUNT_KEY, &myData->myEncoderCount);
+	err = nvs_get_i32(my_handle, NORMAL_SPEED_KEY, &myData->myNormalSpeed);
+	if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND)
+	{
+		//		nvs_close(my_handle);
+		//		return myData;
+	}
+
+	err = nvs_get_i32(my_handle, RAPID_SPEED_KEY, &myData->myRapidSpeed);
 	if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND)
 	{
 		//		nvs_close(my_handle);
@@ -115,13 +136,14 @@ esp_err_t Settings::Load()
 	}
 	
 	myData->mySpeedUnits = static_cast<SpeedUnit>(units);
-	mySavedData->myEncoderCount = myData->myEncoderCount;
+	mySavedData->myNormalSpeed = myData->myNormalSpeed;
+	mySavedData->myRapidSpeed = myData->myRapidSpeed;
 	mySavedData->mySpeedUnits = static_cast<SpeedUnit>(units);
 
 	// Close NVS handle
 	nvs_close(my_handle);
 
-	ESP_LOGI("Settings", "Saved Values: %d, %d", mySavedData->mySpeedUnits, mySavedData->myEncoderCount);
+	ESP_LOGI("Settings", "Saved Values: %d, %d, %d", mySavedData->mySpeedUnits, mySavedData->myNormalSpeed, mySavedData->myRapidSpeed);
 	
 	return ESP_OK;
 }
@@ -131,15 +153,19 @@ void Settings::SaveSettingsTimerCallback(void* param)
 	bool changed = false;
 	Settings *settings = (Settings *)param;
 	
-	int32_t count = settings->myData->myEncoderCount;
-	if (settings->mySavedData->myEncoderCount != count)
+	if (int32_t normalSpeed = settings->myData->myNormalSpeed; settings->mySavedData->myNormalSpeed != normalSpeed)
 	{
-		settings->mySavedData->myEncoderCount = count;
+		settings->mySavedData->myNormalSpeed = normalSpeed;
 		changed = true;
 	}
 
-	SpeedUnit units = settings->myData->mySpeedUnits;
-	if (settings->mySavedData->mySpeedUnits != units)
+	if (int32_t rapidSpeed = settings->myData->myRapidSpeed; settings->mySavedData->myRapidSpeed != rapidSpeed)
+	{
+		settings->mySavedData->myRapidSpeed = rapidSpeed;
+		changed = true;
+	}
+	
+	if (SpeedUnit units = settings->myData->mySpeedUnits; settings->mySavedData->mySpeedUnits != units)
 	{
 		settings->mySavedData->mySpeedUnits = units;
 		changed = true;
@@ -155,24 +181,30 @@ void Settings::UpdateSettingsEventCallback(void* param, esp_event_base_t base, i
 {
 	//Settings *settings = (Settings *)param;
 	
-	Event evt = static_cast<Event>(id);
+	auto evt = static_cast<Event>(id);
 	
 	switch (evt)
 	{
 	case Event::SetSpeedUnit:
 		{
-			SingleValueEventData<SpeedUnit> *evtData = static_cast<SingleValueEventData<SpeedUnit> *>(event_data);
+			auto const *evtData = static_cast<SingleValueEventData<SpeedUnit> *>(event_data);
 			auto su = evtData->myValue;
 			myRef->myData->mySpeedUnits = su;
 		}
 		
 		break;
-	case Event::UpdateEncoderCount:
+	case Event::SaveNormalSpeed:
 		{
-			SingleValueEventData<uint32_t> *evtData = (SingleValueEventData<uint32_t> *)event_data;
-			myRef->myData->myEncoderCount = evtData->myValue;
+			auto const *evtData = (SingleValueEventData<uint32_t> *)event_data;
+			myRef->myData->myNormalSpeed = evtData->myValue;
 		}
 		
+		break;
+	case Event::SaveRapidSpeed:
+		{
+			auto const *evtData = (SingleValueEventData<uint32_t> *)event_data;
+			myRef->myData->myRapidSpeed = evtData->myValue;
+		}
 		break;
 	default:
 		break;

@@ -4,11 +4,13 @@
 #include "shared.h"
 #include "Event.h"
 #include "state.h"
+#include "config.h"
 
 struct SettingsData
 {
-	int32_t myEncoderCount;
-	SpeedUnit mySpeedUnits;
+	int32_t myNormalSpeed = 1;
+	int32_t myRapidSpeed = maxOutputRPM;
+	SpeedUnit mySpeedUnits = SpeedUnit::MMPM;
 };
 
 class Settings : public EventHandler
@@ -39,7 +41,8 @@ class Settings : public EventHandler
 	//constants
 
 	// Define the NVS namespace and keys for the settings
-	static constexpr char const *NVS_NAMESPACE = "v0.1.0";
-	static constexpr char const *ENCODER_COUNT_KEY = "0002";
-	static constexpr char const *SPEED_UNITS_KEY = "0003";
+	static constexpr char const *NVS_NAMESPACE = "v0.1.4";
+	static constexpr char const *NORMAL_SPEED_KEY = "0002";
+	static constexpr char const *RAPID_SPEED_KEY = "0003";
+	static constexpr char const *SPEED_UNITS_KEY = "0004";
 };

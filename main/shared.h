@@ -27,19 +27,19 @@ inline uint32_t mapValueToRange(uint16_t value, uint16_t inMin, uint16_t inMax, 
 	return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
 };
 
-static std::string DemangleTypeName(const char *mangledName)
-{
-	int status = -1;
-	std::unique_ptr<char, void (*)(void *)> demangledName(
-		abi::__cxa_demangle(mangledName, nullptr, nullptr, &status),
-		std::free);
-	if (status == 0)
-	{
-		return std::string(demangledName.get());
-	}
-	else
-	{
-		// Demangling failed, return the mangled name
-		return std::string(mangledName);
-	}
-}
+// static std::string DemangleTypeName(const char *mangledName)
+// {
+// 	int status = -1;
+// 	std::unique_ptr<char, void (*)(void *)> demangledName(
+// 		abi::__cxa_demangle(mangledName, nullptr, nullptr, &status),
+// 		std::free);
+// 	if (status == 0)
+// 	{
+// 		return std::string(demangledName.get());
+// 	}
+// 	else
+// 	{
+// 		// Demangling failed, return the mangled name
+// 		return std::string(mangledName);
+// 	}
+// }

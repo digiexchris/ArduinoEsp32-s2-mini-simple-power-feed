@@ -21,11 +21,13 @@ UI::UI(gpio_num_t sdaPin,
 	   gpio_num_t anEncAPin, 
 	   gpio_num_t aEncBPin, 
 	   gpio_num_t aButtonPin,
-//	   uint32_t aSavedNormalSpeed,
+	   int32_t aSavedNormalSpeed,
+	   int32_t aSavedRapidSpeed,
 	   SpeedUnit aSavedSpeedUnits)
 {
-	myRapidSpeed = 0;
+	myRapidSpeed = aSavedRapidSpeed;
 	mySpeedUnits = aSavedSpeedUnits;
+	myNormalSpeed = aSavedNormalSpeed;
 	
 	myButtonPin = aButtonPin;
 	myUIState = UIState::Stopped;
@@ -33,20 +35,11 @@ UI::UI(gpio_num_t sdaPin,
 	myRef.reset(this);
 	myIsRapid = false;
 
-	auto led = configureLed(RGB_LED_PIN);
-
-	// Clear LED strip (turn off all LEDs)
-	ESP_ERROR_CHECK(led_strip_clear(led));
-	// Flush RGB values to LEDs
-	ESP_ERROR_CHECK(led_strip_refresh(led));
-
 	gpio_pad_select_gpio(myButtonPin);
 	gpio_set_direction(myButtonPin, GPIO_MODE_INPUT);
 	gpio_set_pull_mode(myButtonPin, GPIO_PULLUP_ONLY);
 	
 	xTaskCreatePinnedToCore(ToggleUnitsButtonTask, "ToggleUnitsButtonTask", 2048*2, this, 1, nullptr, 0);
-
-//	myNormalSpeed = aSavedNormalSpeed;
 
 	ESP_LOGI("UI", "UI constructor complete");
 }
@@ -89,24 +82,22 @@ void UI::ProcessEvent(Event aEvent, EventData *aEventData)
 	case Event::ToggleUnits:
 		ToggleUnits();
 		break;
-	case Event::UpdateNormalSpeed: 
+	case Event::UpdateSpeed:
 		{
-		SingleValueEventData<uint32_t> *evt = (SingleValueEventData<uint32_t>*)aEventData;
-			myNormalSpeed = evt->myValue;
-			if (!myIsRapid)
+			SingleValueEventData<int32_t> const *evt = (SingleValueEventData<int32_t>*)aEventData;
+			int32_t speedDelta = evt->myValue;
+
+			if(myIsRapid)
 			{
-				myScreen->SetSpeed(myNormalSpeed);
-			}
-		}
-		break;
-	case Event::UpdateRapidSpeed:
-		{
-			SingleValueEventData<uint32_t> *evt = (SingleValueEventData<uint32_t>*)aEventData;
-			myRapidSpeed = evt->myValue;
-			if (myIsRapid)
-			{
+				myRapidSpeed += speedDelta;
 				myScreen->SetSpeed(myRapidSpeed);
 			}
+			else
+			{
+				myNormalSpeed += speedDelta;
+				myScreen->SetSpeed(myNormalSpeed);
+			}
+
 		}
 		break;
 	default:
@@ -121,8 +112,8 @@ void UI::Start()
 	RegisterEventHandler(STATE_TRANSITION_EVENT, Event::Any, ProcessEventCallback);
 	RegisterEventHandler(COMMAND_EVENT, Event::RapidSpeed, ProcessEventCallback);
 	RegisterEventHandler(COMMAND_EVENT, Event::NormalSpeed, ProcessEventCallback);
-	RegisterEventHandler(COMMAND_EVENT, Event::UpdateNormalSpeed, ProcessEventCallback);
-	RegisterEventHandler(COMMAND_EVENT, Event::UpdateRapidSpeed, ProcessEventCallback);
+	RegisterEventHandler(UI_EVENT , Event::UpdateSpeed, ProcessEventCallback);
+	RegisterEventHandler(UI_EVENT, Event::UpdateSpeed, ProcessEventCallback);
 	RegisterEventHandler(COMMAND_EVENT, Event::ToggleUnits, ProcessEventCallback);
 
 	myScreen->SetUnit(mySpeedUnits);
@@ -131,34 +122,6 @@ void UI::Start()
 	ESP_LOGI("UI", "UI init complete");
 }
 
-led_strip_handle_t UI::configureLed(gpio_num_t anLedPin)
-{
-	// LED strip general initialization, according to your led board design
-	led_strip_config_t strip_config = {
-		.strip_gpio_num = anLedPin,				  // The GPIO that connected to the LED strip's data line
-		.max_leds = 1,							  // The number of LEDs in the strip,
-		.led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
-		.led_model = LED_MODEL_WS2812,			  // LED strip model
-		.flags = {.invert_out = false}			  // whether to invert the output signal
-	};
-
-	// LED strip backend configuration: RMT
-	led_strip_rmt_config_t rmt_config = {
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
-		.rmt_channel = 0,
-#else
-		.clk_src = RMT_CLK_SRC_DEFAULT,		   // different clock source can lead to different power consumption
-		.resolution_hz = LED_STRIP_RMT_RES_HZ, // RMT counter clock frequency
-		.flags.with_dma = false,			   // DMA feature is available on ESP target like ESP32-S3
-#endif
-	};
-
-	// LED Strip object handle
-	led_strip_handle_t led_strip;
-	ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
-	ESP_LOGI("LED", "Created LED strip object with RMT backend");
-	return led_strip;
-}
 
 void UI::ToggleUnitsButtonTask(void *params)
 {

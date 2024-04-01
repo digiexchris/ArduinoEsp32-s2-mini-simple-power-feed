@@ -9,11 +9,11 @@ extern "C"
 {
 #include <u8g2_esp32_hal.h>
 };
-#define ENABLE_SSD1306 1
+
 
 Screen* Screen::myRef = nullptr;
 
-Screen::Screen(gpio_num_t sdaPin, gpio_num_t sclPin, i2c_port_t i2cPort, uint32_t i2cClkFreq)
+Screen::Screen(gpio_num_t sdaPin, gpio_num_t sclPin, i2c_port_t , uint32_t )
 {
 	myRef = this;
 #if ENABLE_SSD1306
@@ -30,15 +30,6 @@ Screen::Screen(gpio_num_t sdaPin, gpio_num_t sclPin, i2c_port_t i2cPort, uint32_
 
 
 #endif
-
-	myPrevSpeedUnit = SpeedUnit::MMPM;
-	mySpeedUnit = SpeedUnit::MMPM;
-	mySpeed = 0;
-	myPrevSpeed = 0;
-	myState = UIState::Stopped;
-	myPrevState = UIState::Stopped;
-	mySpeedState = SpeedState::Normal;
-	myPrevSpeedState = SpeedState::Normal;
 }
 
 void Screen::UpdateTask(void *pvParameters)
@@ -85,6 +76,7 @@ void Screen::Start()
 
 void Screen::Update()
 {
+	#if ENABLE_SSD1306
 	u8g2_ClearBuffer(&u8g2);
 	if (mySpeed != myPrevSpeed)
 	{
@@ -104,6 +96,8 @@ void Screen::Update()
 	
 	
 	u8g2_SendBuffer(&u8g2);
+
+	#endif
 }
 
 void Screen::DrawState()

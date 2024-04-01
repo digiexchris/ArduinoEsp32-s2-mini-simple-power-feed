@@ -19,10 +19,16 @@
 Stepper::Stepper() {
     myUseRapidSpeed = false;
     myRapidSpeed = 0;
-    myNormalSpeed = 0;
+    myNormalSpeed = maxStepsPerSecond;
 }
 
-void Stepper::Init(uint8_t dirPin, uint8_t enablePin, uint8_t stepPin, uint16_t rapidSpeed){
+Stepper::Stepper(int16_t aRapidSpeed, int16_t aNormalSpeed) {
+    myUseRapidSpeed = false;
+    myRapidSpeed = aRapidSpeed;
+    myNormalSpeed = aNormalSpeed;
+}
+
+void Stepper::Init(uint8_t dirPin, uint8_t enablePin, uint8_t stepPin, int16_t rapidSpeed, int16_t normalSpeed){
     #ifdef USE_DENDO_STEPPER
 
     myStepperCfg = {
@@ -40,6 +46,7 @@ void Stepper::Init(uint8_t dirPin, uint8_t enablePin, uint8_t stepPin, uint16_t 
     myEngine.init(1);
     myStepper = myEngine.stepperConnectToPin(stepPin);
     myRapidSpeed = rapidSpeed;
+    myNormalSpeed = normalSpeed;
     if (myStepper) {
         myStepper->setDirectionPin(dirPin);
         myStepper->setEnablePin(enablePin);
@@ -110,15 +117,31 @@ void Stepper::UpdateActiveSpeed() {
 #endif
 }
 
-void Stepper::UpdateRapidSpeed(uint16_t aRapidSpeed) {
-    myRapidSpeed = aRapidSpeed;
+void Stepper::UpdateRapidSpeed(int16_t aRapidSpeedDelta) {
+    myRapidSpeed += aRapidSpeedDelta;
+
+    auto *encoderEventData = new SingleValueEventData<int32_t>(myRapidSpeed);
+    PublishEvent(SETTINGS_EVENT, Event::SaveRapidSpeed, encoderEventData);
+    auto *uiEncoderEventData = new SingleValueEventData<int32_t>(aRapidSpeedDelta);
+    PublishEvent(UI_EVENT, Event::UpdateSpeed, uiEncoderEventData);
+
     UpdateActiveSpeed();
 }
 
-void Stepper::UpdateNormalSpeed(uint16_t aNormalSpeed)
+void Stepper::UpdateNormalSpeed(int16_t aNormalSpeedDelta)
 {
 	//cap it at the rapid speed
-	myNormalSpeed = aNormalSpeed <= myRapidSpeed? aNormalSpeed : myRapidSpeed;
+	myNormalSpeed += aNormalSpeedDelta;
+    if(myNormalSpeed > myRapidSpeed) 
+    {
+        myNormalSpeed = myRapidSpeed; //cap it at the rapid speed
+    }
+
+    auto *encoderEventData = new SingleValueEventData<int32_t>(myNormalSpeed);
+    PublishEvent(SETTINGS_EVENT, Event::SaveNormalSpeed, encoderEventData);
+    auto *uiEncoderEventData = new SingleValueEventData<int32_t>(aNormalSpeedDelta);
+    PublishEvent(UI_EVENT, Event::UpdateSpeed, uiEncoderEventData);
+
 	UpdateActiveSpeed();
 }
 
@@ -140,7 +163,7 @@ void Stepper::MoveRight() {
     myStepper.runInf(static_cast<bool>(StepperDirection::Right));
     #elif USE_FASTACCELSTEPPER
     UpdateActiveSpeed();
-    myStepper->runForward();
+    myStepper->runBackward();
     #endif
     UpdateActiveSpeed();
     ESP_LOGI("Stepper", "Moving right");
