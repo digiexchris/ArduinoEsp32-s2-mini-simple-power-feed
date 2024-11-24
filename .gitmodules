@@ -1,0 +1,6 @@
+[submodule "components/u8g2-hal-esp-idf"]
+	url = https://github.com/mkfrey/u8g2-hal-esp-idf
+[submodule "components/arduino"]
+	url = https://github.com/espressif/arduino-esp32.git
+[submodule "components/FastAccelStepper"]
+	url = https://github.com/gin66/FastAccelStepper.git
