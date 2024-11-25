@@ -2,6 +2,13 @@
 
 #include <memory>
 
+enum class EventType
+{
+	SETTINGS_EVENT,
+	UI_EVENT,
+	COMMAND_EVENT
+};
+
 enum class Event
 {
 	Any = -1,

@@ -3,6 +3,8 @@
 #include "shared.h"
 #include <typeinfo>
 
+using EventCallbackFn = void (*)(EventType type, int32_t id, void *event_data);
+
 class EventBase
 {
 protected:
@@ -29,7 +31,7 @@ public:
 	virtual ~EventPublisher(){};
 
 	template <typename T>
-	static bool PublishEvent(Event event, T *eventData)
+	static bool PublishEvent(EventType type, Event event, T *eventData)
 	{
 		static_assert(std::is_base_of<EventData, T>::value, "T must be derived from EventData");
 
@@ -37,7 +39,7 @@ public:
 		// return esp_event_post(aBase, static_cast<int32_t>(event), (void *)eventData, sizeof(T), portTICK_PERIOD_MS * 200);
 	}
 
-	static bool PublishEvent(Event event)
+	static bool PublishEvent(EventType type, Event event)
 	{
 		return false;
 		// return esp_event_post(aBase, static_cast<int32_t>(event), nullptr, sizeof(nullptr), portTICK_PERIOD_MS * 200);
@@ -53,7 +55,7 @@ protected:
 	EventHandler() : EventBase()
 	{
 	}
-	virtual void RegisterEventHandler(esp_event_base_t aBase, Event event, esp_event_handler_t callback){
+	virtual void RegisterEventHandler(EventType type, Event event, EventCallbackFn callback){
 		// ESP_ERROR_CHECK(esp_event_handler_instance_register(aBase, (int32_t)event, callback, this, nullptr));
 	};
 };

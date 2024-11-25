@@ -1,10 +1,9 @@
 #pragma once
 
-
-#include "shared.h"
 #include "Event.h"
-#include "state.h"
 #include "config.h"
+#include "shared.h"
+#include "state.h"
 
 struct SettingsData
 {
@@ -15,30 +14,29 @@ struct SettingsData
 
 class Settings : public EventHandler
 {
-  public:
+public:
 	Settings();
-	
-	std::shared_ptr<SettingsData> Get(bool reload = false) {
+
+	std::shared_ptr<SettingsData> Get(bool reload = false)
+	{
 		if (reload)
 		{
 			Load();
 		}
-		
-		return myData; 
+
+		return myData;
 	};
 
-  private:
-
-	static void UpdateSettingsEventCallback(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
-	static void SaveSettingsTimerCallback(void* param);
+private:
+	static void UpdateSettingsEventCallback(EventType bastypee, int32_t id, void *event_data);
+	static void SaveSettingsTimerCallback(void *param);
 	static std::unique_ptr<Settings> myRef;
-	esp_err_t Save();
-	esp_err_t Load();
-	std::shared_ptr <SettingsData> myData;
+	bool Save();
+	bool Load();
+	std::shared_ptr<SettingsData> myData;
 	std::shared_ptr<SettingsData> mySavedData;
-	esp_timer_handle_t myTimer;
-	
-	//constants
+
+	// constants
 
 	// Define the NVS namespace and keys for the settings
 	static constexpr char const *NVS_NAMESPACE = "v0.1.4";
