@@ -1,23 +1,46 @@
-# The following lines of boilerplate have to be in your project's CMakeLists
-# in this exact order for cmake to work correctly
-cmake_minimum_required(VERSION 3.16)
-set(CMAKE_CXX_STANDARD 17)
-#set(EXTRA_COMPONENT_DIRS
-  #"lib/espp/components/"
-#)
-#
-#set(
-  #COMPONENTS
-  #"main esptool_py task logger encoder button event_manager"
-  #CACHE STRING
-  #"List of components to include"
-  #)
+cmake_minimum_required(VERSION 3.13)
+include(${CMAKE_HOME_DIRECTORY}/pico_sdk_import.cmake)
 
-# Add the u8g2 subdirectory (adjust the path as necessary)
-# add_subdirectory(lib/u8g2)
+set(PICO_BOARD pico CACHE STRING "Board type")
+project(StepperPowerFeed C CXX ASM)
+pico_sdk_init()
 
+add_compile_options(
+    ### Gnu/Clang C Options
+    $<$<COMPILE_LANG_AND_ID:C,GNU>:-fdiagnostics-color=always>
+    $<$<COMPILE_LANG_AND_ID:C,Clang>:-fcolor-diagnostics>
+)
 
-#add_compile_definitions(USE_DENDO_STEPPER, 1)
-add_compile_definitions(USE_FASTACCELSTEPPER ARDUINO_SKIP_TICK_CHECK)#CONFIG_IDF_TARGET_ESP32S3 SUPPORT_ESP32_RMT SUPPORT_SELECT_DRIVER_TYPE DRIVER_RMT SUPPORT_ESP32S3_MCPWM_PCNT)
-include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(StepperPowerFeed)
+add_subdirectory(${CMAKE_HOME_DIRECTORY}/lib/Simple3dStepperMovementPlanner)
+
+# Create an interface target to set system include directories for Pico SDK libraries
+add_library(pico_system_include_dirs INTERFACE)
+target_include_directories(pico_system_include_dirs SYSTEM INTERFACE ${PICO_INCLUDE_DIRS})
+
+# Include directories for other Pico SDK libraries
+target_link_libraries(pico_system_include_dirs INTERFACE pico_stdlib hardware_pio hardware_gpio pico_multicore pico_stdio_usb pico_printf pico_async_context_threadsafe_background
+)
+
+# Add subdirectories
+add_subdirectory(src)
+
+# Optionally add tests
+option(BUILD_TESTS "Build tests" OFF)
+if (BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
+
+add_custom_command(
+  OUTPUT ${CMAKE_SOURCE_DIR}/compile_commands.json
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+  ${CMAKE_BINARY_DIR}/compile_commands.json
+  ${CMAKE_SOURCE_DIR}/compile_commands.json
+  DEPENDS ${CMAKE_BINARY_DIR}/compile_commands.json
+  COMMENT "Copying compile_commands.json to project root"
+)
+
+# Create a custom target that always runs the above command
+add_custom_target(copy_compile_commands ALL
+  DEPENDS ${CMAKE_SOURCE_DIR}/compile_commands.json
+)
+
